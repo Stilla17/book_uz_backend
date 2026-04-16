@@ -18,6 +18,14 @@ const ProductSchema = new mongoose.Schema(
     discountPrice: { type: Number, default: 0 },
     images: [{ type: String }],
     stock: { type: Number, default: 0 },
+    barcode: { type: String, trim: true },
+    year: { type: Number },
+    cover: {
+      type: String,
+      enum: ["hardcover", "softcover", "paperback", "ebook", "audio", "other"],
+      default: "other",
+    },
+    numberOfPage: { type: Number, min: 0 },
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,14 +33,22 @@ const ProductSchema = new mongoose.Schema(
       required: true,
     },
     subCategoryId: { type: mongoose.Schema.Types.ObjectId },
+
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Author",
       required: true,
     },
+
     publisher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Publishers",
+    },
+
+    contentLanguage: {
+      type: String,
+      enum: ["latin", "cyrillic"],
+      default: "latin",
     },
 
     language: { type: String, enum: ["uz", "ru", "en"], default: "uz" },
