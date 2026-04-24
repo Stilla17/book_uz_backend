@@ -1,6 +1,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") }); // 1. Barcha o'zgaruvchilardan oldin turishi shart
 const dns = require("dns");
+const { syncMoyskladProducts, startSyncCron } = require("./utils/moyskladSync");
 
 // Node DNS'ni majburan Cloudflare'ga o'rnatamiz
 dns.setServers(["1.1.1.1", "1.0.0.1"]);
@@ -24,7 +25,11 @@ const { initSocket } = require("./sockets/socket");
 const routes = require("./routes/index");
 
 // 1. Ma'lumotlar bazasiga ulanish
-connectDB();
+connectDB().then(() => {
+  // startSyncCron(); // Server ishga tushganda Moysklad bilan sinxronizatsiyani boshlaymiz
+
+  syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
+});
 
 const app = express();
 

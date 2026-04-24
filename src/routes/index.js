@@ -13,7 +13,8 @@ const userSubscription = require('./user/subscriptionRoutes');
 const searchRoutes = require('./user/searchRoutes');
 const bannerRoutes = require('./user/bannerRoutes'); 
 const categoryRoutes = require('./user/categoryRoutes');
-const audioBookRoutes = require('./user/audioBookRoutes');
+const authorRoutes = require('./user/authorRoutes');
+const publisherRoutes = require('./user/publisherRoutes');
 // ... boshqa routerlar
 
 
@@ -28,7 +29,6 @@ const adminCouponRoutes = require('./admin/couponRoutes');
 const adminOrderRoutes = require('./admin/adminOrderRoutes');
 const adminSubscription = require('./admin/adminSubscriptionRoutes');
 const adminBannerRoutes = require('./admin/bannerRoutes');
-const adminAudioBookRoutes = require('./admin/audioBookRoutes');
 const adminPublisherRoutes = require('./admin/publisherRoutes');
 
 
@@ -45,7 +45,8 @@ router.use('/search', searchRoutes);               // /api/v1/search
 router.use('/subscription', userSubscription)
 router.use('/banners', bannerRoutes); // Bannerlar uchun umumiy marshrutlar
 router.use('/categories', categoryRoutes); // Kategoriyalar uchun umumiy marshrutlar
-router.use('/audio-books', audioBookRoutes); // Audio kitoblalar uchun umumiy marshrutlar
+router.use('/authors', authorRoutes); // Mualliflar uchun umumiy marshrutlar
+router.use('/publishers', publisherRoutes); // Nashriyotlar uchun umumiy marshrutlar
 
 /**
  * ADMIN MARSHRUTLARI
@@ -60,7 +61,6 @@ router.use('/admin/coupons', adminCouponRoutes); //
 router.use('/admin/orders', adminOrderRoutes); //
 router.use('/admin/subscriptions', adminSubscription) //
 router.use('/admin/banners', adminBannerRoutes); // Bannerlar uchun admin marshrutlari
-router.use('/admin/audio-books', adminAudioBookRoutes); // Audio kitoblalar uchun admin marshrutlari
 router.use('/admin/publishers', adminPublisherRoutes); // Nashriyotlar uchun admin marshrutlari
 
 module.exports = router;

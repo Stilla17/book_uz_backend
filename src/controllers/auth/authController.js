@@ -31,8 +31,10 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const { user, accessToken, refreshToken } = await authService.login(email, password);
+    const { email, password, wishlist, wishlistProductIds, productIds } = req.body;
+    const { user, accessToken, refreshToken } = await authService.login(email, password, {
+      wishlist: wishlistProductIds || productIds || wishlist,
+    });
 
     res.cookie('refreshToken', refreshToken, cookieOptions);
 

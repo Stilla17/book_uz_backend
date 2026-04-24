@@ -2,6 +2,7 @@ const Product = require('../../models/Product');
 const Category = require('../../models/Category');
 const Author = require('../../models/Author');
 const apiResponse = require('../../utils/apiResponse');
+const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 
 /**
  * Global Search Suggestions
@@ -29,7 +30,9 @@ exports.getSuggestions = async (req, res, next) => {
           { "title.en": searchRegex }
         ]
       })
-      .select('title images price slug')
+      .select('title images price slug author publisher')
+      .populate('author')
+      .populate('publisher')
       .limit(5),
 
       Category.find({
@@ -48,12 +51,13 @@ exports.getSuggestions = async (req, res, next) => {
       Author.find({
         name: searchRegex
       })
-      .select('name image slug')
       .limit(3)
     ]);
 
+    const hydratedProducts = await hydrateProductRelations(products);
+
     apiResponse(res, 200, true, "Qidiruv natijalari", {
-      products,
+      products: hydratedProducts,
       categories,
       authors,
       totalCount: products.length + categories.length + authors.length

@@ -1,6 +1,30 @@
 const User = require('../models/User');
+const Product = require('../models/Product');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
+
+const normalizeWishlistProductIds = (wishlist = []) => {
+  const source = Array.isArray(wishlist) ? wishlist : [];
+
+  return [...new Set(source
+    .map((item) => {
+      if (item && typeof item === 'object') {
+        return item.productId || item.product || item._id || item.id;
+      }
+
+      return item;
+    })
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => id.toString()))];
+};
+
+const sanitizeUser = (user) => {
+  const userObject = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+  delete userObject.password;
+  delete userObject.refreshToken;
+  return userObject;
+};
 
 class AuthService {
   // Token yaratish yordamchi funksiyasi
@@ -11,7 +35,7 @@ class AuthService {
   }
 
   async register(userData) {
-    const { email, password, name } = userData;
+    const { email, password, name, wishlist, wishlistProductIds, productIds } = userData;
 
     // 1. Email bandligini tekshirish
     const userExists = await User.findOne({ email });
@@ -30,12 +54,13 @@ class AuthService {
 
     const tokens = this.generateTokens(user._id);
     user.refreshToken = tokens.refreshToken;
+    await this.mergeWishlist(user, wishlistProductIds || productIds || wishlist);
     await user.save();
 
-    return { user, ...tokens };
+    return { user: sanitizeUser(user), ...tokens };
   }
 
-  async login(email, password) {
+  async login(email, password, options = {}) {
     const user = await User.findOne({ email });
     if (!user) throw new Error('Email yoki parol xato');
 
@@ -44,9 +69,27 @@ class AuthService {
 
     const tokens = this.generateTokens(user._id);
     user.refreshToken = tokens.refreshToken;
+    await this.mergeWishlist(user, options.wishlist);
     await user.save();
 
-    return { user, ...tokens };
+    return { user: sanitizeUser(user), ...tokens };
+  }
+
+  async mergeWishlist(user, wishlist) {
+    const productIds = normalizeWishlistProductIds(wishlist);
+
+    if (!productIds.length) {
+      return user;
+    }
+
+    const existingProductIds = await Product.find({ _id: { $in: productIds } }).distinct('_id');
+    const wishlistSet = new Set([
+      ...(user.wishlist || []).map((id) => id.toString()),
+      ...existingProductIds.map((id) => id.toString()),
+    ]);
+
+    user.wishlist = [...wishlistSet];
+    return user;
   }
 
    async refreshToken(oldRefreshToken) {

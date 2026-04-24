@@ -2,12 +2,21 @@ const Cart = require('../../models/Cart');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 
+const populateCartProducts = (query) =>
+  query.populate({
+    path: 'items.product',
+    select: 'title price discountPrice images stock slug format author publisher',
+    populate: [
+      { path: 'author' },
+      { path: 'publisher' },
+    ],
+  });
+
 // 1. Savatni ko'rish (Get Cart)
 
 exports.getCart = async (req, res, next) => {
   try {
-    const cart = await Cart.findOne({ user: req.user.id })
-      .populate('items.product', 'title price images stock slug format author');
+    const cart = await populateCartProducts(Cart.findOne({ user: req.user.id }));
     
     if (!cart) return apiResponse(res, 200, true, "Savat bo'sh", { items: [], totalPrice: 0 });
 
@@ -47,8 +56,7 @@ exports.addToCart = async (req, res, next) => {
       await cart.save();
     }
 
-    const populatedCart = await Cart.findById(cart._id)
-      .populate('items.product', 'title price images stock slug format author');
+    const populatedCart = await populateCartProducts(Cart.findById(cart._id));
 
     apiResponse(res, 200, true, "Savat yangilandi", populatedCart);
   } catch (error) { next(error); }
@@ -74,8 +82,7 @@ exports.updateCartItem = async (req, res, next) => {
       cart.totalPrice = cart.items.reduce((total, item) => total + (item.quantity * item.price), 0);
       await cart.save();
 
-      const populatedCart = await Cart.findById(cart._id)
-        .populate('items.product', 'title price images stock slug format author');
+      const populatedCart = await populateCartProducts(Cart.findById(cart._id));
       
       return apiResponse(res, 200, true, "Miqdor yangilandi", populatedCart);
     }
@@ -101,8 +108,7 @@ exports.removeFromCart = async (req, res, next) => {
     cart.totalPrice = cart.items.reduce((total, item) => total + (item.quantity * item.price), 0);
     await cart.save();
 
-    const populatedCart = await Cart.findById(cart._id)
-      .populate('items.product', 'title price images stock slug format author');
+    const populatedCart = await populateCartProducts(Cart.findById(cart._id));
 
     apiResponse(res, 200, true, "Mahsulot savatdan olib tashlandi", populatedCart);
   } catch (error) { next(error); }

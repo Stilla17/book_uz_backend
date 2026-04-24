@@ -1,4 +1,4 @@
-// backend/src/controllers/user/subscriptionController.js
+﻿// backend/src/controllers/user/subscriptionController.js
 const Subscription = require('../../models/Subscription');
 const UserSubscription = require('../../models/UserSubscription');
 const apiResponse = require('../../utils/apiResponse');
@@ -29,11 +29,6 @@ const mockPlans = [
         en: "10 e-books"
       },
       {
-        uz: "5 ta audio kitob",
-        ru: "5 аудиокниг",
-        en: "5 audiobooks"
-      },
-      {
         uz: "Chegirmalar 10%",
         ru: "Скидки 10%",
         en: "10% discounts"
@@ -56,7 +51,6 @@ const mockPlans = [
     ],
     limits: {
       books: 10,
-      audiobooks: 5,
       discount: 10
     },
     trialDays: 7,
@@ -87,11 +81,6 @@ const mockPlans = [
         uz: "50 ta elektron kitob",
         ru: "50 электронных книг",
         en: "50 e-books"
-      },
-      {
-        uz: "30 ta audio kitob",
-        ru: "30 аудиокниг",
-        en: "30 audiobooks"
       },
       {
         uz: "Chegirmalar 20%",
@@ -126,7 +115,6 @@ const mockPlans = [
     ],
     limits: {
       books: 50,
-      audiobooks: 30,
       discount: 20
     },
     trialDays: 14,
@@ -157,11 +145,6 @@ const mockPlans = [
         uz: "Cheksiz kitoblar",
         ru: "Безлимитные книги",
         en: "Unlimited books"
-      },
-      {
-        uz: "Cheksiz audio kitoblar",
-        ru: "Безлимитные аудиокниги",
-        en: "Unlimited audiobooks"
       },
       {
         uz: "Chegirmalar 30%",
@@ -206,7 +189,6 @@ const mockPlans = [
     ],
     limits: {
       books: -1,
-      audiobooks: -1,
       discount: 30
     },
     trialDays: 30,
@@ -456,15 +438,7 @@ exports.checkAccess = async (req, res, next) => {
         const booksUsed = await getUserBooksCount(userId, subscription.period);
         hasAccess = booksUsed < plan.limits.books;
       }
-    } else if (contentType === 'audiobook') {
-      if (plan.limits.audiobooks === -1) {
-        hasAccess = true; 
-      } else {
-        const audiobooksUsed = await getUserAudiobooksCount(userId, subscription.period);
-        hasAccess = audiobooksUsed < plan.limits.audiobooks;
-      }
     }
-
     apiResponse(res, 200, true, "Access check", { hasAccess });
   } catch (error) {
     next(error);
@@ -476,6 +450,4 @@ async function getUserBooksCount(userId, period) {
   return 0;
 }
 
-async function getUserAudiobooksCount(userId, period) {
-  return 0;
-}
+

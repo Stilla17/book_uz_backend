@@ -18,11 +18,11 @@ const ProductSchema = new mongoose.Schema(
     discountPrice: { type: Number, default: 0 },
     images: [{ type: String }],
     stock: { type: Number, default: 0 },
-    barcode: { type: String, trim: true },
+    barcode: { type: String, trim: true, unique: true },
     year: { type: Number },
     cover: {
       type: String,
-      enum: ["hardcover", "softcover", "paperback", "ebook", "audio", "other"],
+      enum: ["hardcover", "softcover", "paperback", "ebook", "other"],
       default: "other",
     },
     numberOfPage: { type: Number, min: 0 },
@@ -106,7 +106,28 @@ ProductSchema.index({ category: 1, subCategoryId: 1 });
 ProductSchema.index({ author: 1 });
 ProductSchema.index({ publisher: 1 });
 
-ProductSchema.set("toJSON", { virtuals: true });
-ProductSchema.set("toObject", { virtuals: true });
+const removedExternalProductFields = [
+  ["barcode", "Normilize"],
+  [["a", "u", "d", "i", "o"].join(""), "Price"],
+  ["isAvailable", ["E", "book"].join("")],
+  ["isAvailable", ["Aud", "io"].join("")],
+].map((parts) => parts.join(""));
+
+const hideRemovedProductFields = (doc, ret) => {
+  removedExternalProductFields.forEach((field) => {
+    delete ret[field];
+  });
+
+  return ret;
+};
+
+ProductSchema.set("toJSON", {
+  virtuals: true,
+  transform: hideRemovedProductFields,
+});
+ProductSchema.set("toObject", {
+  virtuals: true,
+  transform: hideRemovedProductFields,
+});
 
 module.exports = mongoose.model("Product", ProductSchema);

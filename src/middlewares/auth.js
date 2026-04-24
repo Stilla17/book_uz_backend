@@ -1,15 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const protect = async (req, res, next) => {
-  let token;
-
-  // 1. Authorization headerdan token olish (accessToken)
-
+const getBearerToken = (req) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-    console.log('Token from Authorization header');
+    return req.headers.authorization.split(' ')[1];
   }
+
+  return null;
+};
+
+const protect = async (req, res, next) => {
+  const token = getBearerToken(req);
 
   if (!token) {
     console.log('No token found');
@@ -45,6 +46,23 @@ const protect = async (req, res, next) => {
   }
 };
 
+const optionalProtect = async (req, res, next) => {
+  const token = getBearerToken(req);
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    req.user = await User.findById(decoded.id).select('-password -refreshToken');
+  } catch (error) {
+    req.user = null;
+  }
+
+  next();
+};
+
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     const userRole = String(req.user.role || '').toLowerCase();
@@ -61,4 +79,4 @@ const restrictTo = (...roles) => {
   };
 };
 
-module.exports = { protect, restrictTo };
+module.exports = { protect, optionalProtect, restrictTo };

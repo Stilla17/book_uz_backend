@@ -21,15 +21,15 @@ const parseMaybeJson = (value) => {
 // Yaratish Post
 exports.createPublisher = async (req, res) => {
   try {
-    const {name, description} = req.body;
+    const { name, description } = req.body;
     const slug = slugify(name);
     const image = req.file ? req.file.path : "";
-    
+
     const publisher = await Publisher.create({
       name,
       description,
       slug,
-      image
+      image,
     });
 
     res.status(201).json({ success: true, data: publisher });
@@ -130,3 +130,5 @@ exports.getOne = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+

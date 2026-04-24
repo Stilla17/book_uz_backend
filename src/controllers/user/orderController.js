@@ -32,7 +32,14 @@ const getMyOrders = async (req, res, next) => {
     if (status) filter.status = status;
 
     const orders = await Order.find(filter)
-      .populate('items.product', 'title images price')
+      .populate({
+        path: 'items.product',
+        select: 'title images price author publisher',
+        populate: [
+          { path: 'author' },
+          { path: 'publisher' },
+        ],
+      })
       .sort('-createdAt');
 
     apiResponse(res, 200, true, "Buyurtmalar ro'yxati", orders);
@@ -51,7 +58,13 @@ const getOrderDetails = async (req, res, next) => {
     const order = await Order.findOne({ 
       _id: req.params.id, 
       user: req.user._id 
-    }).populate('items.product');
+    }).populate({
+      path: 'items.product',
+      populate: [
+        { path: 'author' },
+        { path: 'publisher' },
+      ],
+    });
 
     if (!order) {
       return apiResponse(res, 404, false, "Buyurtma topilmadi");

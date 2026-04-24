@@ -43,8 +43,8 @@ class ProductService {
     const skip = (page - 1) * limit;
     
     const products = await Product.find(filter)
-      .populate('author', 'name')
-      .populate('publisher', 'name slug image')
+      .populate('author')
+      .populate('publisher')
       .populate('category', 'title name subgenres')
       .sort(sortOptions)
       .skip(skip)

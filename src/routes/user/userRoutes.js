@@ -19,6 +19,7 @@ router.patch('/update-password', userController.updatePassword);
  */
 router.get('/wishlist', userController.getWishlistDetails);
 router.post('/wishlist/toggle', userController.toggleWishlist); 
+router.post('/wishlist/merge', userController.mergeWishlist);
 
 /**
  * MANZILLAR (SHIPPING ADDRESS)

@@ -4,7 +4,7 @@ const cloudinary = require('../config/cloudinary');
 
 /**
  * Dinamik storage funksiyasi
- * Bu orqali bitta middleware bilan ham product, ham avatar, ham audio yuklasa bo'ladi
+ * Bu orqali bitta middleware bilan product, avatar va boshqa media yuklasa bo'ladi
  */
 
 const storage = new CloudinaryStorage({
@@ -36,21 +36,6 @@ const storage = new CloudinaryStorage({
         folderName = 'bookstore/banners';
       }
     }
-    
-    // Audio fayl uchun
-    else if (file.mimetype.startsWith('audio/')) {
-      resourceType = 'video'; 
-      folderName = 'bookstore/audio';
-      allowedFormats = ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac', 'mpeg'];
-      transformation = []; 
-      
-      // Audio kitoblar uchun maxsus papka
-      if (req.baseUrl?.includes('audio') || req.path?.includes('audio')) {
-        folderName = 'bookstore/audio/books';
-      }
-    }
-
-
     return {
       folder: folderName,
       resource_type: resourceType,
@@ -62,7 +47,7 @@ const storage = new CloudinaryStorage({
 });
 
 /**
- * Fayl filtratsiyasi (Rasm va audio fayllarni tekshirish)
+ * Fayl filtratsiyasi (Rasm va video fayllarni tekshirish)
  */
 
 const fileFilter = (req, file, cb) => {
@@ -73,11 +58,6 @@ const fileFilter = (req, file, cb) => {
     console.log('Rasm fayl qabul qilindi');
     cb(null, true);
   } 
-  // Audio fayllarga ruxsat
-  else if (file.mimetype.startsWith('audio/')) {
-    console.log('Audio fayl qabul qilindi');
-    cb(null, true);
-  } 
   // Video fayllarga ruxsat
   else if (file.mimetype.startsWith('video/')) {
     console.log('Video fayl qabul qilindi');
@@ -85,7 +65,7 @@ const fileFilter = (req, file, cb) => {
   } 
   else {
     console.log('Noto\'g\'ri fayl turi:', file.mimetype);
-    cb(new Error("Faqat rasm, audio va video fayllar yuklash mumkin! (jpg, png, mp3, mp4)"), false);
+    cb(new Error("Faqat rasm va video fayllar yuklash mumkin! (jpg, png, mp4)"), false);
   }
 };
 

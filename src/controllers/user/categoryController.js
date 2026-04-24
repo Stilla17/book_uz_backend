@@ -1,6 +1,7 @@
 const Category = require('../../models/Category');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
+const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 
 const buildCategoryTree = async (filter = {}) => {
   const categories = await Category.find(filter).sort({ order: 1, createdAt: -1 }).lean();
@@ -213,16 +214,17 @@ const getCategoryProducts = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const products = await Product.find(filter)
-      .populate('author', 'name')
-      .populate('publisher', 'name slug image')
+      .populate('author')
+      .populate('publisher')
       .sort(sortOption)
       .skip(skip)
       .limit(Number(limit));
+    const hydratedProducts = await hydrateProductRelations(products);
 
     const total = await Product.countDocuments(filter);
 
     return apiResponse(res, 200, true, "Kategoriya kitoblari", {
-      products,
+      products: hydratedProducts,
       pagination: {
         total,
         page: Number(page),

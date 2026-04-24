@@ -23,7 +23,6 @@ const subscriptionSchema = new mongoose.Schema({
   }],
   limits: {
     books: { type: Number, default: -1 },
-    audiobooks: { type: Number, default: -1 },
     discount: { type: Number, default: 0 }
   },
   trialDays: { type: Number, default: 0 },

@@ -24,7 +24,13 @@ class UserService {
    */
   
   async getWishlist(userId) {
-    const user = await User.findById(userId).populate('wishlist');
+    const user = await User.findById(userId).populate({
+      path: 'wishlist',
+      populate: [
+        { path: 'author' },
+        { path: 'publisher' },
+      ],
+    });
     return user.wishlist;
   }
 }

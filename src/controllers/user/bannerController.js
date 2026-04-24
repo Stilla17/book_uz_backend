@@ -17,9 +17,16 @@ const getActiveBanners = async (req, res, next) => {
     
     const banners = await Banner.find(filter)
       .sort({ order: 1, createdAt: -1 })
-      .populate('selectedBooks', 'title price images slug')
-      .populate('author.authorId', 'name image slug')
-      .populate('quote.authorId', 'name image slug');
+      .populate({
+        path: 'selectedBooks',
+        select: 'title price images slug author publisher',
+        populate: [
+          { path: 'author' },
+          { path: 'publisher' },
+        ],
+      })
+      .populate('author.authorId')
+      .populate('quote.authorId');
     
     apiResponse(res, 200, true, "Faol bannerlar", banners);
   } catch (error) {

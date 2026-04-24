@@ -1,7 +1,35 @@
 const User = require('../../models/User');
 const Product = require('../../models/Product');
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
 const apiResponse = require('../../utils/apiResponse');
+
+const WISHLIST_PRODUCT_SELECT = 'title price discountPrice images ratingAvg slug author publisher stock';
+
+const normalizeWishlistProductIds = (wishlist = []) => {
+  const source = Array.isArray(wishlist) ? wishlist : [];
+
+  return [...new Set(source
+    .map((item) => {
+      if (item && typeof item === 'object') {
+        return item.productId || item.product || item._id || item.id;
+      }
+
+      return item;
+    })
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => id.toString()))];
+};
+
+const populateWishlist = (query) =>
+  query.populate({
+    path: 'wishlist',
+    select: WISHLIST_PRODUCT_SELECT,
+    populate: [
+      { path: 'author' },
+      { path: 'publisher' },
+    ],
+  });
 
 /**
  * 1. Profil ma'lumotlarini olish (Get Profile)
@@ -75,18 +103,62 @@ const updatePassword = async (req, res, next) => {
 const toggleWishlist = async (req, res, next) => {
   try {
     const { productId } = req.body;
-    const user = await User.findById(req.user._id);
-    
-    const index = user.wishlist.indexOf(productId);
-    if (index > -1) {
-      user.wishlist.splice(index, 1); 
-      await user.save();
-      apiResponse(res, 200, true, "Saralanganlardan o'chirildi", user.wishlist);
-    } else {
-      user.wishlist.push(productId); 
-      await user.save();
-      apiResponse(res, 200, true, "Saralanganlarga qo'shildi", user.wishlist);
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return apiResponse(res, 400, false, "productId noto'g'ri");
     }
+
+    const product = await Product.findById(productId).select('_id');
+    if (!product) {
+      return apiResponse(res, 404, false, "Mahsulot topilmadi");
+    }
+
+    const user = await User.findById(req.user._id).select('wishlist');
+    const isWishlisted = user.wishlist.some((id) => id.toString() === productId);
+
+    if (isWishlisted) {
+      user.wishlist = user.wishlist.filter((id) => id.toString() !== productId);
+    } else {
+      user.wishlist.push(productId);
+    }
+
+    await user.save();
+
+    const updatedUser = await populateWishlist(User.findById(req.user._id).select('wishlist'));
+
+    apiResponse(
+      res,
+      200,
+      true,
+      isWishlisted ? "Saralanganlardan o'chirildi" : "Saralanganlarga qo'shildi",
+      {
+        action: isWishlisted ? 'removed' : 'added',
+        wishlist: updatedUser.wishlist,
+      },
+    );
+  } catch (error) { next(error); }
+};
+
+const mergeWishlist = async (req, res, next) => {
+  try {
+    const productIds = normalizeWishlistProductIds(
+      req.body.productIds || req.body.wishlistProductIds || req.body.wishlist,
+    );
+
+    if (!productIds.length) {
+      const user = await populateWishlist(User.findById(req.user._id).select('wishlist'));
+      return apiResponse(res, 200, true, "Saralanganlar birlashtirildi", user.wishlist);
+    }
+
+    const existingProductIds = await Product.find({ _id: { $in: productIds } }).distinct('_id');
+
+    const user = await populateWishlist(User.findByIdAndUpdate(
+      req.user._id,
+      { $addToSet: { wishlist: { $each: existingProductIds } } },
+      { new: true },
+    ).select('wishlist'));
+
+    apiResponse(res, 200, true, "Saralanganlar birlashtirildi", user.wishlist);
   } catch (error) { next(error); }
 };
 
@@ -96,11 +168,7 @@ const toggleWishlist = async (req, res, next) => {
 
 const getWishlistDetails = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).populate({
-      path: 'wishlist',
-      select: 'title price discountPrice images ratingAvg slug',
-      populate: { path: 'author', select: 'name' }
-    });
+    const user = await populateWishlist(User.findById(req.user._id).select('wishlist'));
     apiResponse(res, 200, true, "Saralangan kitoblar", user.wishlist);
   } catch (error) { next(error); }
 };
@@ -332,6 +400,7 @@ module.exports = {
   updateProfile, 
   updatePassword, 
   toggleWishlist, 
+  mergeWishlist,
   getWishlistDetails,
   addAddress,
   deleteAddress,
