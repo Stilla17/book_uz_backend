@@ -66,7 +66,8 @@ const refresh = async (req, res, next) => {
       accessToken: result.accessToken 
     });
   } catch (error) {
-    next(error);
+    res.clearCookie('refreshToken');
+    return apiResponse(res, 401, false, error.message || "Qayta login qiling");
   }
 };
 

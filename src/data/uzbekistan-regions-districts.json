@@ -1,0 +1,3068 @@
+[
+  {
+    "id": "qoraqalpogiston",
+    "externalId": 8,
+    "name": {
+      "uz": "Qoraqalpog‘iston Respublikasi",
+      "ru": "Республика Каракалпакстан",
+      "en": "Republic of Karakalpakstan"
+    },
+    "districts": [
+      {
+        "id": "buzatov_district",
+        "externalId": 1,
+        "name": {
+          "uz": "Bo'zatov tumani",
+          "ru": "Бузатовский район",
+          "en": "Buzatov district",
+          "cyrl": "Бўзатов тумани",
+          "kar": "Bozataw rayonı"
+        },
+        "soato": 1735209,
+        "phoneCode": 0,
+        "order": 17
+      },
+      {
+        "id": "nukus_district",
+        "externalId": 10,
+        "name": {
+          "uz": "Nukus shahar",
+          "ru": "г. Нукус",
+          "en": "Nukus district",
+          "cyrl": "Нукус шаҳар",
+          "kar": "Nókis qalası"
+        },
+        "soato": 1735401,
+        "phoneCode": 0,
+        "order": 1
+      },
+      {
+        "id": "amudaryo_district",
+        "externalId": 12,
+        "name": {
+          "uz": "Amudaryo tumani",
+          "ru": "Амударьинский район",
+          "en": "Amudaryo district",
+          "cyrl": "Амударё тумани",
+          "kar": "Ámiwdárya rayonı"
+        },
+        "soato": 1735204,
+        "phoneCode": 0,
+        "order": 2
+      },
+      {
+        "id": "beruniy_district",
+        "externalId": 13,
+        "name": {
+          "uz": "Beruniy tumani",
+          "ru": "Берунийский район",
+          "en": "Beruniy district",
+          "cyrl": "Беруний тумани",
+          "kar": "Beruniy rayonı"
+        },
+        "soato": 1735207,
+        "phoneCode": 0,
+        "order": 3
+      },
+      {
+        "id": "kanlikul_district",
+        "externalId": 14,
+        "name": {
+          "uz": "Qonliko’l tumani",
+          "ru": "Канлыкульский район",
+          "en": "Kanlikul district",
+          "cyrl": "Қонликўл тумани",
+          "kar": "Qanlıkól rayonı"
+        },
+        "soato": 1735218,
+        "phoneCode": 0,
+        "order": 4
+      },
+      {
+        "id": "karaosak_district",
+        "externalId": 15,
+        "name": {
+          "uz": "Qorao’zak tumani",
+          "ru": "Караузякский район",
+          "en": "Karaosak district",
+          "cyrl": "Қораўзак тумани",
+          "kar": "Qaraózek rayonı"
+        },
+        "soato": 1735211,
+        "phoneCode": 0,
+        "order": 5
+      },
+      {
+        "id": "kegeyli_district",
+        "externalId": 16,
+        "name": {
+          "uz": "Kegeyli tumani",
+          "ru": "Кегейлийский район",
+          "en": "Kegeyli district",
+          "cyrl": "Кегейли тумани",
+          "kar": "Kegeyli rayonı"
+        },
+        "soato": 1735212,
+        "phoneCode": 0,
+        "order": 6
+      },
+      {
+        "id": "kungrad_district",
+        "externalId": 17,
+        "name": {
+          "uz": "Qo’ng’irot tumani",
+          "ru": "Кунградский район",
+          "en": "Kungrad district",
+          "cyrl": "Қўнғирот тумани",
+          "kar": "Qońırat rayonı"
+        },
+        "soato": 1735215,
+        "phoneCode": 0,
+        "order": 7
+      },
+      {
+        "id": "muynak_district",
+        "externalId": 18,
+        "name": {
+          "uz": "Muynoq tumani",
+          "ru": "Муйнакский район",
+          "en": "Muynak district",
+          "cyrl": "Муйноқ тумани",
+          "kar": "Moynaq rayonı"
+        },
+        "soato": 1735222,
+        "phoneCode": 0,
+        "order": 8
+      },
+      {
+        "id": "nukus_district",
+        "externalId": 19,
+        "name": {
+          "uz": "Nukus tumani",
+          "ru": "Нукусский район",
+          "en": "Nukus district",
+          "cyrl": "Нукус тумани",
+          "kar": "Nókis rayonı"
+        },
+        "soato": 1735225,
+        "phoneCode": 0,
+        "order": 9
+      },
+      {
+        "id": "tahtakuprik_district",
+        "externalId": 20,
+        "name": {
+          "uz": "Taxtako’prik tumani",
+          "ru": "Тахтакупырский район",
+          "en": "Tahtakuprik district",
+          "cyrl": "Тахтакўприк тумани",
+          "kar": "Taxtakópir rayonı"
+        },
+        "soato": 1735230,
+        "phoneCode": 0,
+        "order": 10
+      },
+      {
+        "id": "turtkul_district",
+        "externalId": 21,
+        "name": {
+          "uz": "To’rtko’l tumani",
+          "ru": "Турткульский район",
+          "en": "Turtkul district",
+          "cyrl": "Тўрткўл тумани",
+          "kar": "Tórtkúl rayonı"
+        },
+        "soato": 1735233,
+        "phoneCode": 0,
+        "order": 11
+      },
+      {
+        "id": "khodzhayli_district",
+        "externalId": 22,
+        "name": {
+          "uz": "Xo’jayli tumani",
+          "ru": "Ходжейлийский район",
+          "en": "Khodzhayli district",
+          "cyrl": "Хўжайли тумани",
+          "kar": "Xojeli rayonı"
+        },
+        "soato": 1735236,
+        "phoneCode": 0,
+        "order": 12
+      },
+      {
+        "id": "chimbay_district",
+        "externalId": 23,
+        "name": {
+          "uz": "Chimboy tumani",
+          "ru": "Чимбайский район",
+          "en": "Chimbay district",
+          "cyrl": "Чимбой тумани",
+          "kar": "Shımbay rayonı"
+        },
+        "soato": 1735240,
+        "phoneCode": 0,
+        "order": 13
+      },
+      {
+        "id": "shumanay_district",
+        "externalId": 24,
+        "name": {
+          "uz": "Sho’manay tumani",
+          "ru": "Шуманайский район",
+          "en": "Shumanay district",
+          "cyrl": "Шўманай тумани",
+          "kar": "Shomanay rayonı"
+        },
+        "soato": 1735243,
+        "phoneCode": 0,
+        "order": 14
+      },
+      {
+        "id": "ellikqala_district",
+        "externalId": 25,
+        "name": {
+          "uz": "Ellikqal’a tumani",
+          "ru": "Элликкалинский район",
+          "en": "Ellikqal'a district",
+          "cyrl": "Элликқалъа тумани",
+          "kar": "Ellıkqala rayonı"
+        },
+        "soato": 1735250,
+        "phoneCode": 0,
+        "order": 15
+      },
+      {
+        "id": "taxiatosh",
+        "externalId": 218,
+        "name": {
+          "uz": "Taxiatosh",
+          "ru": " Тахиатош",
+          "en": "Taxiatosh",
+          "cyrl": " Тахиатош",
+          "kar": "Taqıyatas "
+        },
+        "soato": 1735228,
+        "phoneCode": 0,
+        "order": 16
+      }
+    ]
+  },
+  {
+    "id": "buxoro",
+    "externalId": 9,
+    "name": {
+      "uz": "Buxoro viloyati",
+      "ru": "Бухарская область",
+      "en": "Bukhara region"
+    },
+    "districts": [
+      {
+        "id": "bukhara_city",
+        "externalId": 26,
+        "name": {
+          "uz": "Buxoro shahar",
+          "ru": "г. Бухара",
+          "en": "Bukhara city",
+          "cyrl": "Бухоро шаҳар",
+          "kar": "Buxara qalası"
+        },
+        "soato": 1706401,
+        "phoneCode": 0,
+        "order": 32
+      },
+      {
+        "id": "bukhara_district",
+        "externalId": 27,
+        "name": {
+          "uz": "Buxoro tumani",
+          "ru": "Бухарский район",
+          "en": "Bukhara district",
+          "cyrl": "Бухоро тумани",
+          "kar": "Buxara rayonı"
+        },
+        "soato": 1706207,
+        "phoneCode": 0,
+        "order": 33
+      },
+      {
+        "id": "vobkent_district",
+        "externalId": 28,
+        "name": {
+          "uz": "Vobkent tumani",
+          "ru": "Вабкентский район",
+          "en": "Vobkent district",
+          "cyrl": "Вобкент тумани",
+          "kar": "Vobkent rayonı"
+        },
+        "soato": 1706212,
+        "phoneCode": 0,
+        "order": 34
+      },
+      {
+        "id": "gijduvan_district",
+        "externalId": 29,
+        "name": {
+          "uz": "G’ijduvon tumani",
+          "ru": "Гиждуванский район",
+          "en": "Gijduvan district",
+          "cyrl": "Ғиждувон тумани",
+          "kar": "Gıjduwan rayonı"
+        },
+        "soato": 1706215,
+        "phoneCode": 0,
+        "order": 35
+      },
+      {
+        "id": "jondor_district",
+        "externalId": 30,
+        "name": {
+          "uz": "Jondor tumani",
+          "ru": "Жондорский район",
+          "en": "Jondor District",
+          "cyrl": "Жондор тумани",
+          "kar": "Jondor rayonı"
+        },
+        "soato": 1706246,
+        "phoneCode": 0,
+        "order": 36
+      },
+      {
+        "id": "kogon_district",
+        "externalId": 32,
+        "name": {
+          "uz": "Kogon tumani",
+          "ru": "г. Каган район",
+          "en": "Kogon district",
+          "cyrl": "Когон тумани",
+          "kar": "Kogan rayonı"
+        },
+        "soato": 1706219,
+        "phoneCode": 0,
+        "order": 37
+      },
+      {
+        "id": "alot_district",
+        "externalId": 33,
+        "name": {
+          "uz": "Olot tumani",
+          "ru": "Алатский район",
+          "en": "Alot district",
+          "cyrl": "Олот тумани",
+          "kar": "Alat rayonı"
+        },
+        "soato": 1706204,
+        "phoneCode": 0,
+        "order": 38
+      },
+      {
+        "id": "peshku_district",
+        "externalId": 34,
+        "name": {
+          "uz": "Peshku tumani",
+          "ru": "Пешкунский район",
+          "en": "Peshku district",
+          "cyrl": "Пешку тумани",
+          "kar": "Peshku rayonı"
+        },
+        "soato": 1706240,
+        "phoneCode": 0,
+        "order": 39
+      },
+      {
+        "id": "romitan_district",
+        "externalId": 35,
+        "name": {
+          "uz": "Romitan tumani",
+          "ru": "Ромитанский район",
+          "en": "Romitan district",
+          "cyrl": "Ромитан тумани",
+          "kar": "Romitan rayonı"
+        },
+        "soato": 1706242,
+        "phoneCode": 0,
+        "order": 40
+      },
+      {
+        "id": "shofirkon_district",
+        "externalId": 36,
+        "name": {
+          "uz": "Shofirkon tumani",
+          "ru": "Шафирканский район",
+          "en": "Shofirkon district",
+          "cyrl": "Шофиркон тумани",
+          "kar": "Shofirkon rayonı"
+        },
+        "soato": 1706258,
+        "phoneCode": 0,
+        "order": 41
+      },
+      {
+        "id": "karakul_district",
+        "externalId": 37,
+        "name": {
+          "uz": "Qorako’l tumani",
+          "ru": "Каракульский район",
+          "en": "Karakul district",
+          "cyrl": "Қоракўл тумани",
+          "kar": "Qarakól rayonı "
+        },
+        "soato": 1706230,
+        "phoneCode": 0,
+        "order": 42
+      },
+      {
+        "id": "qorovulbozor_district",
+        "externalId": 38,
+        "name": {
+          "uz": "Qorovulbozor tumani",
+          "ru": "Караулбазарский район",
+          "en": "Qorovulbozor district",
+          "cyrl": "Қоровулбозор тумани",
+          "kar": "Qarawılbazar rayonı"
+        },
+        "soato": 1706232,
+        "phoneCode": 0,
+        "order": 43
+      },
+      {
+        "id": "kogon_city",
+        "externalId": 210,
+        "name": {
+          "uz": "Kogon shahar",
+          "ru": "г.Когон",
+          "en": "Kogon city",
+          "cyrl": "Когон шаҳри",
+          "kar": "Kogon qalası "
+        },
+        "soato": 1706403,
+        "phoneCode": 0,
+        "order": 44
+      }
+    ]
+  },
+  {
+    "id": "samarqand",
+    "externalId": 10,
+    "name": {
+      "uz": "Samarqand viloyati",
+      "ru": "Самаркандская область",
+      "en": "Samarqand region"
+    },
+    "districts": [
+      {
+        "id": "samarqand_city",
+        "externalId": 39,
+        "name": {
+          "uz": "Samarqand shahar",
+          "ru": "г. Самарканд",
+          "en": "Samarqand city",
+          "cyrl": "Самарқанд шаҳар",
+          "kar": "Samarqand qalası"
+        },
+        "soato": 1718401,
+        "phoneCode": 0,
+        "order": 94
+      },
+      {
+        "id": "oqdaryo_district",
+        "externalId": 40,
+        "name": {
+          "uz": "Oqdaryo tumani",
+          "ru": "Акдарьинский район",
+          "en": "Oqdaryo district",
+          "cyrl": "Оқдарё тумани",
+          "kar": "Aqdárya rayonı"
+        },
+        "soato": 1718203,
+        "phoneCode": 0,
+        "order": 95
+      },
+      {
+        "id": "bulungur_district",
+        "externalId": 41,
+        "name": {
+          "uz": "Bulung’ur tumani",
+          "ru": "Булунгурский район",
+          "en": "Bulungur district",
+          "cyrl": "Булунғур тумани",
+          "kar": "Bulunǵur rayonı"
+        },
+        "soato": 1718206,
+        "phoneCode": 0,
+        "order": 96
+      },
+      {
+        "id": "jomboy_district",
+        "externalId": 42,
+        "name": {
+          "uz": "Jomboy tumani",
+          "ru": "Джамбайский район",
+          "en": "Jomboy district",
+          "cyrl": "Жомбой тумани",
+          "kar": "Jambay rayonı"
+        },
+        "soato": 1718209,
+        "phoneCode": 0,
+        "order": 97
+      },
+      {
+        "id": "kattakurgan_district",
+        "externalId": 43,
+        "name": {
+          "uz": "Kattaqo’rg’on tumani",
+          "ru": "Каттакурганский район",
+          "en": "Kattakurgan district",
+          "cyrl": "Каттақўрғон тумани",
+          "kar": "Kattaqorǵan rayonı"
+        },
+        "soato": 1718215,
+        "phoneCode": 0,
+        "order": 98
+      },
+      {
+        "id": "kattakurgan_city",
+        "externalId": 44,
+        "name": {
+          "uz": "Kattaqo’rg’on shahar",
+          "ru": "г. Каттакурган",
+          "en": "Kattakurgan city",
+          "cyrl": "Каттақўрғон шаҳар",
+          "kar": "Kattaqorǵan qalası"
+        },
+        "soato": 1718406,
+        "phoneCode": 0,
+        "order": 99
+      },
+      {
+        "id": "koshrabad_district",
+        "externalId": 45,
+        "name": {
+          "uz": "Qo’shrabod tumani",
+          "ru": "Кошрабадский район",
+          "en": "Koshrabad district",
+          "cyrl": "Қўшрабод тумани",
+          "kar": "Qoshrabat rayonı "
+        },
+        "soato": 1718216,
+        "phoneCode": 0,
+        "order": 100
+      },
+      {
+        "id": "narpay_district",
+        "externalId": 46,
+        "name": {
+          "uz": "Narpay tumani",
+          "ru": "Нарпайский район",
+          "en": "Narpay district",
+          "cyrl": "Нарпай тумани",
+          "kar": "Narpay rayonı"
+        },
+        "soato": 1718218,
+        "phoneCode": 0,
+        "order": 101
+      },
+      {
+        "id": "nurobod_district",
+        "externalId": 47,
+        "name": {
+          "uz": "Nurobod tumani",
+          "ru": "Нурабадский район",
+          "en": "Nurobod district",
+          "cyrl": "Нуробод тумани",
+          "kar": "Nurabad rayonı"
+        },
+        "soato": 1718235,
+        "phoneCode": 0,
+        "order": 102
+      },
+      {
+        "id": "payariq_district",
+        "externalId": 48,
+        "name": {
+          "uz": "Payariq tumani",
+          "ru": "Пайарыкский район",
+          "en": "Payariq district",
+          "cyrl": "Пайариқ тумани",
+          "kar": "Payarıq rayonı"
+        },
+        "soato": 1718224,
+        "phoneCode": 0,
+        "order": 103
+      },
+      {
+        "id": "pastdargom_district",
+        "externalId": 49,
+        "name": {
+          "uz": "Pastdarg’om tumani",
+          "ru": "Пасдаргомский район",
+          "en": "Pastdargom district",
+          "cyrl": "Пастдарғом тумани",
+          "kar": "Pasdarǵam rayonı"
+        },
+        "soato": 1718227,
+        "phoneCode": 0,
+        "order": 104
+      },
+      {
+        "id": "pakhtachi_district",
+        "externalId": 50,
+        "name": {
+          "uz": "Paxtachi tumani",
+          "ru": "Пахтачийский район",
+          "en": "Pakhtachi district",
+          "cyrl": "Пахтачи тумани",
+          "kar": "Paxtashı rayonı"
+        },
+        "soato": 1718230,
+        "phoneCode": 0,
+        "order": 105
+      },
+      {
+        "id": "samarkand_district",
+        "externalId": 51,
+        "name": {
+          "uz": "Samarqand tumani",
+          "ru": "Самаркандский район",
+          "en": "Samarkand district",
+          "cyrl": "Самарқанд тумани",
+          "kar": "Samarqand rayonı"
+        },
+        "soato": 1718233,
+        "phoneCode": 0,
+        "order": 106
+      },
+      {
+        "id": "taylak_district",
+        "externalId": 53,
+        "name": {
+          "uz": "Tayloq tumani",
+          "ru": "Тайлакский район",
+          "en": "Taylak district",
+          "cyrl": "Тайлоқ тумани",
+          "kar": "Taylaq rayonı"
+        },
+        "soato": 1718238,
+        "phoneCode": 0,
+        "order": 107
+      },
+      {
+        "id": "urgut_district",
+        "externalId": 54,
+        "name": {
+          "uz": "Urgut tumani",
+          "ru": "Ургутский район",
+          "en": "Urgut district",
+          "cyrl": "Ургут тумани",
+          "kar": "Úrgút rayonı"
+        },
+        "soato": 1718236,
+        "phoneCode": 0,
+        "order": 108
+      },
+      {
+        "id": "ishtixon_district",
+        "externalId": 209,
+        "name": {
+          "uz": "Ishtixon tumani",
+          "ru": "Иштиханский район",
+          "en": "Ishtixon district",
+          "cyrl": "Иштихон тумани",
+          "kar": "Ishtixan rayonı"
+        },
+        "soato": 1718212,
+        "phoneCode": 0,
+        "order": 109
+      }
+    ]
+  },
+  {
+    "id": "navoiy",
+    "externalId": 11,
+    "name": {
+      "uz": "Navoiy viloyati",
+      "ru": "Навоийская область",
+      "en": "Navoi region"
+    },
+    "districts": [
+      {
+        "id": "gazgon_city",
+        "externalId": 2,
+        "name": {
+          "uz": "G'azg'on shahri",
+          "ru": "город Газган",
+          "en": "Gazgon city",
+          "cyrl": "Ғозғон шаҳри",
+          "kar": "Ǵazǵan qalası "
+        },
+        "soato": 1712412,
+        "phoneCode": 0,
+        "order": 82
+      },
+      {
+        "id": "navoi_city",
+        "externalId": 55,
+        "name": {
+          "uz": "Navoiy shahar",
+          "ru": "г. Навои",
+          "en": "Navoi city",
+          "cyrl": "Навоий шаҳар",
+          "kar": "Nawayı qalası"
+        },
+        "soato": 1712401,
+        "phoneCode": 0,
+        "order": 72
+      },
+      {
+        "id": "karmana_district",
+        "externalId": 56,
+        "name": {
+          "uz": "Karmana tumani",
+          "ru": "Карманинский район",
+          "en": "Karmana district",
+          "cyrl": "Кармана тумани",
+          "kar": "Karmana rayonı"
+        },
+        "soato": 1712234,
+        "phoneCode": 0,
+        "order": 73
+      },
+      {
+        "id": "navbahor_district",
+        "externalId": 57,
+        "name": {
+          "uz": "Navbaxor tumani",
+          "ru": "Навбахорский район",
+          "en": "Navbahor district",
+          "cyrl": "Навбахор тумани",
+          "kar": "Náwbaxar rayonı"
+        },
+        "soato": 1712230,
+        "phoneCode": 0,
+        "order": 74
+      },
+      {
+        "id": "nurata_district",
+        "externalId": 58,
+        "name": {
+          "uz": "Nurota tumani",
+          "ru": "Нуратинский район",
+          "en": "Nurata district",
+          "cyrl": "Нурота тумани",
+          "kar": "Nurata rayonı"
+        },
+        "soato": 1712238,
+        "phoneCode": 0,
+        "order": 75
+      },
+      {
+        "id": "hatirchi_district",
+        "externalId": 59,
+        "name": {
+          "uz": "Xatirchi tumani",
+          "ru": "Хатырчинский район",
+          "en": "Hatirchi district",
+          "cyrl": "Хатирчи тумани",
+          "kar": "Xatirshi rayonı"
+        },
+        "soato": 1712251,
+        "phoneCode": 0,
+        "order": 76
+      },
+      {
+        "id": "qiziltepa_district",
+        "externalId": 60,
+        "name": {
+          "uz": "Qiziltepa tumani",
+          "ru": "Кызылтепинский район",
+          "en": "Qiziltepa district",
+          "cyrl": "Қизилтепа тумани",
+          "kar": "Qızıltóbe rayonı"
+        },
+        "soato": 1712216,
+        "phoneCode": 0,
+        "order": 77
+      },
+      {
+        "id": "konimex_district",
+        "externalId": 61,
+        "name": {
+          "uz": "Konimex tumani",
+          "ru": "Канимехский район",
+          "en": "Konimex district",
+          "cyrl": "Конимех тумани",
+          "kar": "Kanimex rayonı"
+        },
+        "soato": 1712211,
+        "phoneCode": 0,
+        "order": 78
+      },
+      {
+        "id": "uchkuduk_district",
+        "externalId": 62,
+        "name": {
+          "uz": "Uchquduq tumani",
+          "ru": "Учкудукский район",
+          "en": "Uchkuduk district",
+          "cyrl": "Учқудуқ тумани",
+          "kar": "Úshqudıq  rayonı"
+        },
+        "soato": 1712248,
+        "phoneCode": 0,
+        "order": 79
+      },
+      {
+        "id": "district_63",
+        "externalId": 63,
+        "name": {
+          "uz": "Zarafshon shahar",
+          "ru": "г.  Зарафшан",
+          "en": "Зарафшон шаҳар",
+          "cyrl": "Зарафшон шаҳар",
+          "kar": "Zarafshan qalası"
+        },
+        "soato": 1712408,
+        "phoneCode": 0,
+        "order": 80
+      },
+      {
+        "id": "tomdi_district",
+        "externalId": 64,
+        "name": {
+          "uz": "Tomdi tumani",
+          "ru": "Тамдынский район",
+          "en": "Tomdi district",
+          "cyrl": "Томди тумани",
+          "kar": "Tamdı rayonı"
+        },
+        "soato": 1712244,
+        "phoneCode": 0,
+        "order": 81
+      }
+    ]
+  },
+  {
+    "id": "andijon",
+    "externalId": 12,
+    "name": {
+      "uz": "Andijon viloyati",
+      "ru": "Андижанская область",
+      "en": "Andijan region"
+    },
+    "districts": [
+      {
+        "id": "andijan_city",
+        "externalId": 65,
+        "name": {
+          "uz": "Andijon shahar",
+          "ru": "г. Андижан",
+          "en": "Andijan city",
+          "cyrl": "Андижон шаҳар",
+          "kar": "Andijan qalası "
+        },
+        "soato": 1703401,
+        "phoneCode": 0,
+        "order": 16
+      },
+      {
+        "id": "hanabad_city",
+        "externalId": 66,
+        "name": {
+          "uz": "Xonobod shahar",
+          "ru": "г. Ханабад",
+          "en": "Hanabad city",
+          "cyrl": "Хонобод шаҳар",
+          "kar": "Xanabad qalası"
+        },
+        "soato": 1703408,
+        "phoneCode": 0,
+        "order": 17
+      },
+      {
+        "id": "andijan_district",
+        "externalId": 67,
+        "name": {
+          "uz": "Andijon tumani",
+          "ru": "Андижанский район",
+          "en": "Andijan district",
+          "cyrl": "Андижон тумани",
+          "kar": "Andijan rayonı"
+        },
+        "soato": 1703203,
+        "phoneCode": 0,
+        "order": 18
+      },
+      {
+        "id": "asaka_district",
+        "externalId": 68,
+        "name": {
+          "uz": "Asaka tumani",
+          "ru": "Асакинский район",
+          "en": "Asaka district",
+          "cyrl": "Асака тумани",
+          "kar": "Asaka rayonı"
+        },
+        "soato": 1703224,
+        "phoneCode": 0,
+        "order": 19
+      },
+      {
+        "id": "baliqchi_district",
+        "externalId": 69,
+        "name": {
+          "uz": "Baliqchi tumani",
+          "ru": "Балыкчинский район",
+          "en": "Baliqchi district",
+          "cyrl": "Балиқчи тумани",
+          "kar": "Balıqshı rayonı"
+        },
+        "soato": 1703206,
+        "phoneCode": 0,
+        "order": 20
+      },
+      {
+        "id": "bostan_district",
+        "externalId": 70,
+        "name": {
+          "uz": "Bo’ston tumani",
+          "ru": "Бустанский район",
+          "en": "Bostan district",
+          "cyrl": "Бўстон тумани",
+          "kar": "Bostan rayonı"
+        },
+        "soato": 1703209,
+        "phoneCode": 0,
+        "order": 21
+      },
+      {
+        "id": "buloqboshi_district",
+        "externalId": 71,
+        "name": {
+          "uz": "Buloqboshi tumani",
+          "ru": "Булакбашинский район",
+          "en": "Buloqboshi district",
+          "cyrl": "Булоқбоши тумани",
+          "kar": "Bulaqbası rayonı"
+        },
+        "soato": 1703210,
+        "phoneCode": 0,
+        "order": 22
+      },
+      {
+        "id": "jalalkuduk_district",
+        "externalId": 72,
+        "name": {
+          "uz": "Jalolquduq tumani",
+          "ru": "Жалакудукский район",
+          "en": "Jalalkuduk district",
+          "cyrl": "Жалолқудуқ тумани",
+          "kar": "Jalalquduq rayonı"
+        },
+        "soato": 1703211,
+        "phoneCode": 0,
+        "order": 23
+      },
+      {
+        "id": "izboskan_district",
+        "externalId": 73,
+        "name": {
+          "uz": "Izboskan tumani",
+          "ru": "Избасканский район",
+          "en": "Izboskan district",
+          "cyrl": "Избоскан тумани",
+          "kar": "Izbaskan rayonı"
+        },
+        "soato": 1703214,
+        "phoneCode": 0,
+        "order": 24
+      },
+      {
+        "id": "ulugnor_district",
+        "externalId": 74,
+        "name": {
+          "uz": "Ulug’nor tumani",
+          "ru": "Улугнорский район",
+          "en": "Ulugnor district",
+          "cyrl": "Улуғнор тумани",
+          "kar": "Ulıqnar rayonı"
+        },
+        "soato": 1703217,
+        "phoneCode": 0,
+        "order": 25
+      },
+      {
+        "id": "kurgantepa_district",
+        "externalId": 75,
+        "name": {
+          "uz": "Qo’rg’ontepa tumani",
+          "ru": "Кургантепинский район",
+          "en": "Kurgantepa district",
+          "cyrl": "Қўрғонтепа тумани",
+          "kar": "Qorǵantóbe rayonı"
+        },
+        "soato": 1703220,
+        "phoneCode": 0,
+        "order": 26
+      },
+      {
+        "id": "marhamat_district",
+        "externalId": 76,
+        "name": {
+          "uz": "Marxamat tumani",
+          "ru": "Мархаматский район",
+          "en": "Marhamat district",
+          "cyrl": "Мархамат тумани",
+          "kar": "Marxamat rayonı"
+        },
+        "soato": 1703227,
+        "phoneCode": 0,
+        "order": 27
+      },
+      {
+        "id": "oltinkol_district",
+        "externalId": 77,
+        "name": {
+          "uz": "Oltinko’l tumani",
+          "ru": "Алтынкульский район",
+          "en": "Oltinkol district",
+          "cyrl": "Олтинкўл тумани",
+          "kar": "Altınkól rayonı"
+        },
+        "soato": 1703202,
+        "phoneCode": 0,
+        "order": 28
+      },
+      {
+        "id": "pakhtaobod_district",
+        "externalId": 78,
+        "name": {
+          "uz": "Paxtaobod tumani",
+          "ru": "Пахтаабадский район",
+          "en": "Pakhtaobod district",
+          "cyrl": "Пахтаобод тумани",
+          "kar": "Paxtaabad rayonı"
+        },
+        "soato": 1703232,
+        "phoneCode": 0,
+        "order": 29
+      },
+      {
+        "id": "hodjaabad_district",
+        "externalId": 79,
+        "name": {
+          "uz": "Ho’jaobod tumani",
+          "ru": "Ходжаабадский район",
+          "en": "Hodjaabad district",
+          "cyrl": "Ҳўжаобод тумани",
+          "kar": "Xojaabad rayonı"
+        },
+        "soato": 1703236,
+        "phoneCode": 0,
+        "order": 30
+      },
+      {
+        "id": "shahrihan_district",
+        "externalId": 80,
+        "name": {
+          "uz": "Shaxrixon tumani",
+          "ru": "Шахриханский район",
+          "en": "Shahrihan district",
+          "cyrl": "Шахрихон тумани",
+          "kar": "Shaxrixan rayonı"
+        },
+        "soato": 1703230,
+        "phoneCode": 0,
+        "order": 31
+      }
+    ]
+  },
+  {
+    "id": "fargona",
+    "externalId": 13,
+    "name": {
+      "uz": "Farg‘ona viloyati",
+      "ru": "Ферганская область",
+      "en": "Fergana region"
+    },
+    "districts": [
+      {
+        "id": "margilan_city",
+        "externalId": 82,
+        "name": {
+          "uz": "Marg’ilon shahar",
+          "ru": "г. Маргилан",
+          "en": "Margilan city",
+          "cyrl": "Марғилон шаҳар",
+          "kar": "Marǵulan rayonı"
+        },
+        "soato": 1730412,
+        "phoneCode": 0,
+        "order": 153
+      },
+      {
+        "id": "fergana_city",
+        "externalId": 83,
+        "name": {
+          "uz": "Farg’ona shahar",
+          "ru": "г. Фергана",
+          "en": "Fergana city",
+          "cyrl": "Фарғона шаҳар",
+          "kar": "Ferǵana qalası"
+        },
+        "soato": 1730401,
+        "phoneCode": 0,
+        "order": 154
+      },
+      {
+        "id": "quvasay_city",
+        "externalId": 84,
+        "name": {
+          "uz": "Quvasoy shahar",
+          "ru": "г. Кувасай",
+          "en": "Quvasay city",
+          "cyrl": "Қувасой шаҳар",
+          "kar": "Quwasay rayonı"
+        },
+        "soato": 1730408,
+        "phoneCode": 0,
+        "order": 155
+      },
+      {
+        "id": "kokand_city",
+        "externalId": 85,
+        "name": {
+          "uz": "Qo’qon shahar",
+          "ru": "г. Коканд",
+          "en": "Kokand city",
+          "cyrl": "Қўқон шаҳар",
+          "kar": "Qoqan rayonı"
+        },
+        "soato": 1730405,
+        "phoneCode": 0,
+        "order": 156
+      },
+      {
+        "id": "bagdad_district",
+        "externalId": 86,
+        "name": {
+          "uz": "Bog’dod tumani",
+          "ru": "Багдадский район",
+          "en": "Bagdad district",
+          "cyrl": "Боғдод тумани",
+          "kar": "Baǵdat rayonı"
+        },
+        "soato": 1730209,
+        "phoneCode": 0,
+        "order": 157
+      },
+      {
+        "id": "beshariq_district",
+        "externalId": 87,
+        "name": {
+          "uz": "Beshariq tumani",
+          "ru": "Бешарыкский район",
+          "en": "Beshariq district",
+          "cyrl": "Бешариқ тумани",
+          "kar": "Besarıq rayonı"
+        },
+        "soato": 1730215,
+        "phoneCode": 0,
+        "order": 158
+      },
+      {
+        "id": "buvayda_district",
+        "externalId": 88,
+        "name": {
+          "uz": "Buvayda tumani",
+          "ru": "Бувайдинский район",
+          "en": "Buvayda District",
+          "cyrl": "Бувайда тумани",
+          "kar": "Buvayda rayonı"
+        },
+        "soato": 1730212,
+        "phoneCode": 0,
+        "order": 159
+      },
+      {
+        "id": "dangara_district",
+        "externalId": 89,
+        "name": {
+          "uz": "Dang’ara tumani",
+          "ru": "Дангаринский район",
+          "en": "Dangara district",
+          "cyrl": "Данғара тумани",
+          "kar": "Danǵara rayonı"
+        },
+        "soato": 1730236,
+        "phoneCode": 0,
+        "order": 160
+      },
+      {
+        "id": "yozyovon_district",
+        "externalId": 90,
+        "name": {
+          "uz": "Yozyovon tumani",
+          "ru": "Язъяванский район",
+          "en": "Yozyovon district",
+          "cyrl": "Ёзёвон тумани",
+          "kar": "Yazyavan rayonı"
+        },
+        "soato": 1730242,
+        "phoneCode": 0,
+        "order": 161
+      },
+      {
+        "id": "oltiaryk_district",
+        "externalId": 91,
+        "name": {
+          "uz": "Oltiariq tumani",
+          "ru": "Алтыарыкский район",
+          "en": "Oltiaryk district",
+          "cyrl": "Олтиариқ тумани",
+          "kar": "Altıarıq rayonı"
+        },
+        "soato": 1730203,
+        "phoneCode": 0,
+        "order": 162
+      },
+      {
+        "id": "kushtepa_district",
+        "externalId": 92,
+        "name": {
+          "uz": "Qo’shtepa tumani",
+          "ru": "Коштепинский район",
+          "en": "Kushtepa district",
+          "cyrl": "Қўштепа тумани",
+          "kar": "Qostóbe rayonı"
+        },
+        "soato": 1730206,
+        "phoneCode": 0,
+        "order": 163
+      },
+      {
+        "id": "rishtan_district",
+        "externalId": 93,
+        "name": {
+          "uz": "Rishton tumani",
+          "ru": "Риштанский район",
+          "en": "Rishtan district",
+          "cyrl": "Риштон тумани",
+          "kar": "Rishtan rayonı"
+        },
+        "soato": 1730224,
+        "phoneCode": 0,
+        "order": 164
+      },
+      {
+        "id": "sokh_district",
+        "externalId": 94,
+        "name": {
+          "uz": "So’x tumani",
+          "ru": "Сохский район",
+          "en": "Sokh district",
+          "cyrl": "Сўх тумани",
+          "kar": "Sox rayonı"
+        },
+        "soato": 1730226,
+        "phoneCode": 0,
+        "order": 165
+      },
+      {
+        "id": "tashlaq_district",
+        "externalId": 95,
+        "name": {
+          "uz": "Toshloq tumani",
+          "ru": "Ташлакский район",
+          "en": "Tashlaq district",
+          "cyrl": "Тошлоқ тумани",
+          "kar": "Taslaq rayonı"
+        },
+        "soato": 1730227,
+        "phoneCode": 0,
+        "order": 166
+      },
+      {
+        "id": "uchkuprik_district",
+        "externalId": 96,
+        "name": {
+          "uz": "Uchko’prik tumani",
+          "ru": "Учкуприкский район",
+          "en": "Uchkuprik district",
+          "cyrl": "Учкўприк тумани",
+          "kar": "Úshkópir rayonı"
+        },
+        "soato": 1730221,
+        "phoneCode": 0,
+        "order": 167
+      },
+      {
+        "id": "fergana_district",
+        "externalId": 97,
+        "name": {
+          "uz": "Farg’ona tumani",
+          "ru": "Ферганский район",
+          "en": "Fergana district",
+          "cyrl": "Фарғона тумани",
+          "kar": "Ferǵana rayonı"
+        },
+        "soato": 1730233,
+        "phoneCode": 0,
+        "order": 168
+      },
+      {
+        "id": "furqat_district",
+        "externalId": 98,
+        "name": {
+          "uz": "Furqat tumani",
+          "ru": "Фуркатский район",
+          "en": "Furqat district",
+          "cyrl": "Фурқат тумани",
+          "kar": "Furqat rayonı"
+        },
+        "soato": 1730238,
+        "phoneCode": 0,
+        "order": 169
+      },
+      {
+        "id": "uzbekistan_district",
+        "externalId": 99,
+        "name": {
+          "uz": "O’zbekiston tumani",
+          "ru": "Узбекистанский район",
+          "en": "Uzbekistan district",
+          "cyrl": "Ўзбекистон тумани",
+          "kar": "Ózbekstan rayonı"
+        },
+        "soato": 1730230,
+        "phoneCode": 0,
+        "order": 170
+      },
+      {
+        "id": "kuva_district",
+        "externalId": 100,
+        "name": {
+          "uz": "Quva tumani",
+          "ru": "Кувинский район",
+          "en": "Kuva district",
+          "cyrl": "Қува тумани",
+          "kar": "Quva rayonı"
+        },
+        "soato": 1730218,
+        "phoneCode": 0,
+        "order": 171
+      }
+    ]
+  },
+  {
+    "id": "surxondaryo",
+    "externalId": 14,
+    "name": {
+      "uz": "Surxondaryo viloyati",
+      "ru": "Сурхандарьинская область",
+      "en": "Surkhandarya region"
+    },
+    "districts": [
+      {
+        "id": "bandixon_district",
+        "externalId": 3,
+        "name": {
+          "uz": "Bandixon tumani",
+          "ru": "Бандиханский район",
+          "en": "Bandixon district",
+          "cyrl": "Бандихон тумани",
+          "kar": "Bandixan rayonı"
+        },
+        "soato": 1722203,
+        "phoneCode": 0,
+        "order": 0
+      },
+      {
+        "id": "angor_district",
+        "externalId": 101,
+        "name": {
+          "uz": "Angor tumani",
+          "ru": "Ангорский район",
+          "en": "Angor district",
+          "cyrl": "Ангор тумани",
+          "kar": "Angor rayonı"
+        },
+        "soato": 1722202,
+        "phoneCode": 0,
+        "order": 121
+      },
+      {
+        "id": "boysun_district",
+        "externalId": 102,
+        "name": {
+          "uz": "Boysun tumani",
+          "ru": "Байсунский район",
+          "en": "Boysun district",
+          "cyrl": "Бойсун тумани",
+          "kar": "Baysın rayonı"
+        },
+        "soato": 1722204,
+        "phoneCode": 0,
+        "order": 122
+      },
+      {
+        "id": "denau_district",
+        "externalId": 103,
+        "name": {
+          "uz": "Denov tumani",
+          "ru": "Денауский район",
+          "en": "Denau district",
+          "cyrl": "Денов тумани",
+          "kar": "Denaw rayonı"
+        },
+        "soato": 1722210,
+        "phoneCode": 0,
+        "order": 123
+      },
+      {
+        "id": "jarkurgan_district",
+        "externalId": 104,
+        "name": {
+          "uz": "Jarqo’rg’on tumani",
+          "ru": "Джаркурганский район",
+          "en": "Jarkurgan district",
+          "cyrl": "Жарқўрғон тумани",
+          "kar": "Jarqorǵan rayonı"
+        },
+        "soato": 1722212,
+        "phoneCode": 0,
+        "order": 124
+      },
+      {
+        "id": "qiziriq_district",
+        "externalId": 105,
+        "name": {
+          "uz": "Qiziriq tumani",
+          "ru": "Кизирыкский район",
+          "en": "Qiziriq district",
+          "cyrl": "Қизириқ тумани",
+          "kar": "Qızırıq rayonı"
+        },
+        "soato": 1722215,
+        "phoneCode": 0,
+        "order": 125
+      },
+      {
+        "id": "kumkurgan_district",
+        "externalId": 106,
+        "name": {
+          "uz": "Qumqo’rg’on tumani",
+          "ru": "Кумкурганский район",
+          "en": "Kumkurgan district",
+          "cyrl": "Қумқўрғон тумани",
+          "kar": "Qumqorǵan rayonı "
+        },
+        "soato": 1722214,
+        "phoneCode": 0,
+        "order": 126
+      },
+      {
+        "id": "muzrabot_district",
+        "externalId": 107,
+        "name": {
+          "uz": "Muzrabot tumani",
+          "ru": "Музрабатский район",
+          "en": "Muzrabot district",
+          "cyrl": "Музработ тумани",
+          "kar": "Muzrabad rayonı"
+        },
+        "soato": 1722207,
+        "phoneCode": 0,
+        "order": 127
+      },
+      {
+        "id": "oltinsoy_district",
+        "externalId": 108,
+        "name": {
+          "uz": "Oltinsoy tumani",
+          "ru": "Алтынсайский район",
+          "en": "Oltinsoy district",
+          "cyrl": "Олтинсой тумани",
+          "kar": "Altınsay rayonı"
+        },
+        "soato": 1722201,
+        "phoneCode": 0,
+        "order": 128
+      },
+      {
+        "id": "sariosiyo_district",
+        "externalId": 109,
+        "name": {
+          "uz": "Sariosiyo tumani",
+          "ru": "Сариасийский район",
+          "en": "Sariosiyo district",
+          "cyrl": "Сариосиё тумани",
+          "kar": "Sarıasiya rayonı"
+        },
+        "soato": 1722217,
+        "phoneCode": 0,
+        "order": 129
+      },
+      {
+        "id": "termez_district",
+        "externalId": 110,
+        "name": {
+          "uz": "Termiz tumani",
+          "ru": "Термезский район",
+          "en": "Termez district",
+          "cyrl": "Термиз тумани",
+          "kar": "Termiz rayonı"
+        },
+        "soato": 1722220,
+        "phoneCode": 0,
+        "order": 130
+      },
+      {
+        "id": "termiz_city",
+        "externalId": 111,
+        "name": {
+          "uz": "Termiz shahar",
+          "ru": "г. Термез",
+          "en": "Termiz city",
+          "cyrl": "Термиз шаҳар",
+          "kar": "Termiz qalası"
+        },
+        "soato": 1722401,
+        "phoneCode": 0,
+        "order": 131
+      },
+      {
+        "id": "uzun_district",
+        "externalId": 112,
+        "name": {
+          "uz": "Uzun tumani",
+          "ru": "Узунский район",
+          "en": "Uzun district",
+          "cyrl": "Узун тумани",
+          "kar": "Uzun rayonı"
+        },
+        "soato": 1722221,
+        "phoneCode": 0,
+        "order": 132
+      },
+      {
+        "id": "sherobod_district",
+        "externalId": 113,
+        "name": {
+          "uz": "Sherobod tumani",
+          "ru": "Шерабадский район",
+          "en": "Sherobod district",
+          "cyrl": "Шеробод тумани",
+          "kar": "Sherabad rayonı"
+        },
+        "soato": 1722223,
+        "phoneCode": 0,
+        "order": 133
+      },
+      {
+        "id": "shurchi_district",
+        "externalId": 114,
+        "name": {
+          "uz": "Sho’rchi tumani",
+          "ru": "Шурчинский район",
+          "en": "Shurchi district",
+          "cyrl": "Шўрчи тумани",
+          "kar": "Shorshı rayonı"
+        },
+        "soato": 1722226,
+        "phoneCode": 0,
+        "order": 134
+      }
+    ]
+  },
+  {
+    "id": "sirdaryo",
+    "externalId": 15,
+    "name": {
+      "uz": "Sirdaryo viloyati",
+      "ru": "Сырдарьинская область",
+      "en": "Sirdarya region"
+    },
+    "districts": [
+      {
+        "id": "akaltyn_district",
+        "externalId": 115,
+        "name": {
+          "uz": "Oqoltin tumani",
+          "ru": "Акалтынский район",
+          "en": "Akaltyn district",
+          "cyrl": "Оқолтин тумани",
+          "kar": "Aqaltın rayonı"
+        },
+        "soato": 1724206,
+        "phoneCode": 0,
+        "order": 110
+      },
+      {
+        "id": "boyovut_district",
+        "externalId": 116,
+        "name": {
+          "uz": "Boyovut tumani",
+          "ru": "Баяутский район",
+          "en": "Boyovut district",
+          "cyrl": "Боёвут тумани",
+          "kar": "Bayawıt rayonı"
+        },
+        "soato": 1724212,
+        "phoneCode": 0,
+        "order": 111
+      },
+      {
+        "id": "guliston_district",
+        "externalId": 117,
+        "name": {
+          "uz": "Guliston tumani",
+          "ru": "Гулистанский район",
+          "en": "Guliston district",
+          "cyrl": "Гулистон тумани",
+          "kar": "Gúlistan rayonı"
+        },
+        "soato": 1724220,
+        "phoneCode": 0,
+        "order": 112
+      },
+      {
+        "id": "mirzaobod_district",
+        "externalId": 118,
+        "name": {
+          "uz": "Mirzaobod tumani",
+          "ru": "Мирзаабадский район",
+          "en": "Mirzaobod district",
+          "cyrl": "Мирзаобод тумани",
+          "kar": "Mırzaabad rayonı"
+        },
+        "soato": 1724228,
+        "phoneCode": 0,
+        "order": 113
+      },
+      {
+        "id": "saykhunobod_district",
+        "externalId": 119,
+        "name": {
+          "uz": "Sayxunobod tumani",
+          "ru": "Сайхунабадский район",
+          "en": "Saykhunobod district",
+          "cyrl": "Сайхунобод тумани",
+          "kar": "Sayxunabad rayonı"
+        },
+        "soato": 1724216,
+        "phoneCode": 0,
+        "order": 114
+      },
+      {
+        "id": "sirdarya_district",
+        "externalId": 120,
+        "name": {
+          "uz": "Sirdaryo tumani",
+          "ru": "Сырдарьинский район",
+          "en": "Sirdarya district",
+          "cyrl": "Сирдарё тумани",
+          "kar": "Sırdárya rayonı"
+        },
+        "soato": 1724231,
+        "phoneCode": 0,
+        "order": 115
+      },
+      {
+        "id": "sardoba_district",
+        "externalId": 121,
+        "name": {
+          "uz": "Sardoba tumani",
+          "ru": "Сардобинский район",
+          "en": "Sardoba district",
+          "cyrl": "Сардоба тумани",
+          "kar": "Sardoba rayonı"
+        },
+        "soato": 1724226,
+        "phoneCode": 0,
+        "order": 116
+      },
+      {
+        "id": "hawos_district",
+        "externalId": 122,
+        "name": {
+          "uz": "Xovos tumani",
+          "ru": "Хавастский район",
+          "en": "Hawos district",
+          "cyrl": "Ховос тумани",
+          "kar": "Xavos rayonı"
+        },
+        "soato": 1724235,
+        "phoneCode": 0,
+        "order": 117
+      },
+      {
+        "id": "gulistan_city",
+        "externalId": 123,
+        "name": {
+          "uz": "Guliston shahar",
+          "ru": "г. Гулистан",
+          "en": "Gulistan city",
+          "cyrl": "Гулистон шаҳар",
+          "kar": "Gúlistan qalası "
+        },
+        "soato": 1724401,
+        "phoneCode": 0,
+        "order": 118
+      },
+      {
+        "id": "shirin_district",
+        "externalId": 124,
+        "name": {
+          "uz": "Shirin shahar",
+          "ru": "г. Ширин",
+          "en": "shirin district",
+          "cyrl": "Ширин шаҳар",
+          "kar": "Shirin qalası"
+        },
+        "soato": 1724410,
+        "phoneCode": 0,
+        "order": 119
+      },
+      {
+        "id": "yangiyer_city",
+        "externalId": 126,
+        "name": {
+          "uz": "Yangiyer shahar",
+          "ru": "г. Янгиер",
+          "en": "Yangiyer city",
+          "cyrl": "Янгиер шаҳар",
+          "kar": "Yangiyer qalası"
+        },
+        "soato": 1724413,
+        "phoneCode": 0,
+        "order": 120
+      }
+    ]
+  },
+  {
+    "id": "xorazm",
+    "externalId": 16,
+    "name": {
+      "uz": "Xorazm viloyati",
+      "ru": "Хорезмская область",
+      "en": "Khorezm region"
+    },
+    "districts": [
+      {
+        "id": "tuprakhkala_district",
+        "externalId": 4,
+        "name": {
+          "uz": "Tuproqqala tumani",
+          "ru": "Тупроққалъа тумани",
+          "en": "Tuprakhkala district",
+          "cyrl": "Тупроққалъа тумани",
+          "kar": "Topıraqqala rayonı"
+        },
+        "soato": 1733221,
+        "phoneCode": 0,
+        "order": 200
+      },
+      {
+        "id": "urgench_city",
+        "externalId": 127,
+        "name": {
+          "uz": "Urganch shahar",
+          "ru": "г. Ургенч",
+          "en": "Urgench city",
+          "cyrl": "Урганч шаҳар",
+          "kar": "Úrgenish qalası "
+        },
+        "soato": 1733401,
+        "phoneCode": 0,
+        "order": 172
+      },
+      {
+        "id": "bogot_district",
+        "externalId": 128,
+        "name": {
+          "uz": "Bog’ot tumani",
+          "ru": "Багатский район",
+          "en": "Bogot district",
+          "cyrl": "Боғот тумани",
+          "kar": "Baǵat rayonı"
+        },
+        "soato": 1733204,
+        "phoneCode": 0,
+        "order": 173
+      },
+      {
+        "id": "gurlan_district",
+        "externalId": 129,
+        "name": {
+          "uz": "Gurlan tumani",
+          "ru": "Гурленский район",
+          "en": "Gurlan district",
+          "cyrl": "Гурлан тумани",
+          "kar": "Gúrlen rayonı"
+        },
+        "soato": 1733208,
+        "phoneCode": 0,
+        "order": 174
+      },
+      {
+        "id": "hazorasp_district",
+        "externalId": 130,
+        "name": {
+          "uz": "Xozarasp tumani",
+          "ru": "Хазараспский район",
+          "en": "Hazorasp district",
+          "cyrl": "Хозарасп тумани",
+          "kar": "Xazarasp rayonı"
+        },
+        "soato": 1733220,
+        "phoneCode": 0,
+        "order": 175
+      },
+      {
+        "id": "khiva_district",
+        "externalId": 131,
+        "name": {
+          "uz": "Xiva tumani",
+          "ru": "Хивинский район",
+          "en": "Khiva district",
+          "cyrl": "Хива тумани",
+          "kar": "Xiywa rayonı"
+        },
+        "soato": 1733226,
+        "phoneCode": 0,
+        "order": 176
+      },
+      {
+        "id": "hanka_district",
+        "externalId": 132,
+        "name": {
+          "uz": "Xonqa tumani",
+          "ru": "Ханкинский район",
+          "en": "Hanka district",
+          "cyrl": "Хонқа тумани",
+          "kar": "Xanqa rayonı"
+        },
+        "soato": 1733223,
+        "phoneCode": 0,
+        "order": 177
+      },
+      {
+        "id": "urgench_district",
+        "externalId": 133,
+        "name": {
+          "uz": "Urganch tumani",
+          "ru": "Ургенчский район",
+          "en": "Urgench district",
+          "cyrl": "Урганч тумани",
+          "kar": "Úrgenish rayonı"
+        },
+        "soato": 1733217,
+        "phoneCode": 0,
+        "order": 178
+      },
+      {
+        "id": "koshkupir_district",
+        "externalId": 134,
+        "name": {
+          "uz": "Qo’shko’pir tumani",
+          "ru": "Кошкупырский район",
+          "en": "Koshkupir district",
+          "cyrl": "Қўшкўпир тумани",
+          "kar": "Qoskópir rayonı"
+        },
+        "soato": 1733212,
+        "phoneCode": 0,
+        "order": 179
+      },
+      {
+        "id": "shovot_district",
+        "externalId": 135,
+        "name": {
+          "uz": "Shovot tumani",
+          "ru": "Шаватский район",
+          "en": "Shovot district",
+          "cyrl": "Шовот тумани",
+          "kar": "Shavat rayonı"
+        },
+        "soato": 1733230,
+        "phoneCode": 0,
+        "order": 180
+      },
+      {
+        "id": "yangiariq_district",
+        "externalId": 136,
+        "name": {
+          "uz": "Yangiariq tumani",
+          "ru": "Янгиарыкский район",
+          "en": "Yangiariq district",
+          "cyrl": "Янгиариқ тумани",
+          "kar": "Jańaarıq rayonı"
+        },
+        "soato": 1733233,
+        "phoneCode": 0,
+        "order": 181
+      },
+      {
+        "id": "yangibozor_district",
+        "externalId": 137,
+        "name": {
+          "uz": "Yangibozor tumani",
+          "ru": "Янгибазарский район",
+          "en": "Yangibozor district",
+          "cyrl": "Янгибозор тумани",
+          "kar": "Jańabazar rayonı"
+        },
+        "soato": 1733236,
+        "phoneCode": 0,
+        "order": 182
+      },
+      {
+        "id": "khiva_city",
+        "externalId": 217,
+        "name": {
+          "uz": "Xiva shahar",
+          "ru": "г.Хива",
+          "en": "Khiva city",
+          "cyrl": "Хива шаҳар",
+          "kar": "Xıywa qalası"
+        },
+        "soato": 1733406,
+        "phoneCode": 0,
+        "order": 183
+      }
+    ]
+  },
+  {
+    "id": "toshkent_viloyati",
+    "externalId": 17,
+    "name": {
+      "uz": "Toshkent viloyati",
+      "ru": "Ташкентская область",
+      "en": "Tashkent region"
+    },
+    "districts": [
+      {
+        "id": "angren_city",
+        "externalId": 138,
+        "name": {
+          "uz": "Angren shahar",
+          "ru": "г. Ангрен ",
+          "en": "Angren city",
+          "cyrl": "Ангрен шаҳар",
+          "kar": "Angren qalası"
+        },
+        "soato": 1727407,
+        "phoneCode": 0,
+        "order": 135
+      },
+      {
+        "id": "bekabad_district",
+        "externalId": 139,
+        "name": {
+          "uz": "Bekobod shahar",
+          "ru": "г. Бекабад ",
+          "en": "Bekabad district",
+          "cyrl": "Бекобод шаҳар",
+          "kar": "Bekabad qalası"
+        },
+        "soato": 1727413,
+        "phoneCode": 0,
+        "order": 136
+      },
+      {
+        "id": "almalik_city",
+        "externalId": 140,
+        "name": {
+          "uz": "Olmaliq shahar",
+          "ru": "г. Алмалик ",
+          "en": "Almalik city",
+          "cyrl": "Олмалиқ шаҳар",
+          "kar": "Almalıq qalası"
+        },
+        "soato": 1727404,
+        "phoneCode": 0,
+        "order": 137
+      },
+      {
+        "id": "chirchik_city",
+        "externalId": 141,
+        "name": {
+          "uz": "Chirchiq shahar",
+          "ru": "г. Чирчик ",
+          "en": "Chirchik city",
+          "cyrl": "Чирчиқ шаҳар",
+          "kar": "Shırshıq qalası"
+        },
+        "soato": 1727419,
+        "phoneCode": 0,
+        "order": 138
+      },
+      {
+        "id": "bekabad_district",
+        "externalId": 142,
+        "name": {
+          "uz": "Bekobod tumani",
+          "ru": "Бекабадский район",
+          "en": "Bekabad district",
+          "cyrl": "Бекобод тумани",
+          "kar": "Bekabad rayonı"
+        },
+        "soato": 1727220,
+        "phoneCode": 0,
+        "order": 139
+      },
+      {
+        "id": "boka_district",
+        "externalId": 143,
+        "name": {
+          "uz": "Bo’ka tumani",
+          "ru": "Букинский район",
+          "en": "Boka district",
+          "cyrl": "Бўка тумани",
+          "kar": "Boka rayonı"
+        },
+        "soato": 1727228,
+        "phoneCode": 0,
+        "order": 140
+      },
+      {
+        "id": "bostanlik_district",
+        "externalId": 144,
+        "name": {
+          "uz": "Bo’stonliq tumani",
+          "ru": "Бостанлыкский район",
+          "en": "Bostanlik district",
+          "cyrl": "Бўстонлиқ тумани",
+          "kar": "Bostanlıq rayonı"
+        },
+        "soato": 1727224,
+        "phoneCode": 0,
+        "order": 141
+      },
+      {
+        "id": "kibray_district",
+        "externalId": 145,
+        "name": {
+          "uz": "Qibray tumani",
+          "ru": "Кибрайский район",
+          "en": "Kibray district",
+          "cyrl": "Қибрай тумани",
+          "kar": "Qıbray rayonı"
+        },
+        "soato": 1727248,
+        "phoneCode": 0,
+        "order": 142
+      },
+      {
+        "id": "zangiota_district",
+        "externalId": 146,
+        "name": {
+          "uz": "Zangiota tumani",
+          "ru": "Зангиатинский район",
+          "en": "Zangiota district",
+          "cyrl": "Зангиота тумани",
+          "kar": "Zangiata rayonı"
+        },
+        "soato": 1727237,
+        "phoneCode": 0,
+        "order": 143
+      },
+      {
+        "id": "kuyichirchiq_district",
+        "externalId": 148,
+        "name": {
+          "uz": "Quyichirchiq tumani",
+          "ru": "Куйичирчикский район",
+          "en": "Kuyichirchiq district",
+          "cyrl": "Қуйичирчиқ тумани",
+          "kar": "Tómengishırshıq rayonı"
+        },
+        "soato": 1727233,
+        "phoneCode": 0,
+        "order": 144
+      },
+      {
+        "id": "akkurgan_district",
+        "externalId": 149,
+        "name": {
+          "uz": "Oqqo’rg’on tumani",
+          "ru": "Аккурганский район",
+          "en": "Akkurgan district",
+          "cyrl": "Оққўрғон тумани",
+          "kar": "Aqqorǵan rayonı"
+        },
+        "soato": 1727206,
+        "phoneCode": 0,
+        "order": 145
+      },
+      {
+        "id": "oxongary_district",
+        "externalId": 150,
+        "name": {
+          "uz": "Oxongaron tumani",
+          "ru": "Ахангаранский район",
+          "en": "Oxongary district",
+          "cyrl": "Охонгарон тумани",
+          "kar": "Ahangaran rayonı"
+        },
+        "soato": 1727212,
+        "phoneCode": 0,
+        "order": 146
+      },
+      {
+        "id": "parkent_district",
+        "externalId": 151,
+        "name": {
+          "uz": "Parkent tumani",
+          "ru": "Паркентский район",
+          "en": "Parkent district",
+          "cyrl": "Паркент тумани",
+          "kar": "Parkent rayonı"
+        },
+        "soato": 1727249,
+        "phoneCode": 0,
+        "order": 147
+      },
+      {
+        "id": "pskent_district",
+        "externalId": 152,
+        "name": {
+          "uz": "Pskent tumani",
+          "ru": "Пскентский район",
+          "en": "Pskent district",
+          "cyrl": "Пскент тумани",
+          "kar": "Pskent rayonı"
+        },
+        "soato": 1727250,
+        "phoneCode": 0,
+        "order": 148
+      },
+      {
+        "id": "urtachirchik_district",
+        "externalId": 153,
+        "name": {
+          "uz": "O’rtachirchiq tumani",
+          "ru": "Уртачирчикский район",
+          "en": "Urtachirchik district",
+          "cyrl": "Ўртачирчиқ тумани",
+          "kar": "Ortashırshıq rayonı"
+        },
+        "soato": 1727253,
+        "phoneCode": 0,
+        "order": 149
+      },
+      {
+        "id": "chinaz_district",
+        "externalId": 154,
+        "name": {
+          "uz": "Chinoz tumani",
+          "ru": "Чиназский район",
+          "en": "Chinaz district",
+          "cyrl": "Чиноз тумани",
+          "kar": "Shınaz rayonı"
+        },
+        "soato": 1727256,
+        "phoneCode": 0,
+        "order": 150
+      },
+      {
+        "id": "yukori_chirchiq_district",
+        "externalId": 155,
+        "name": {
+          "uz": "Yuqorichirchiq tumani",
+          "ru": "Юкоричирчикский район",
+          "en": "Yukori Chirchiq district",
+          "cyrl": "Юқоричирчиқ тумани",
+          "kar": "Joqarıshırshıq rayonı"
+        },
+        "soato": 1727239,
+        "phoneCode": 0,
+        "order": 151
+      },
+      {
+        "id": "yangiyol_district",
+        "externalId": 156,
+        "name": {
+          "uz": "Yangiyo’l tumani",
+          "ru": "Янгиюльский район",
+          "en": "Yangiyol district",
+          "cyrl": "Янгийўл тумани",
+          "kar": "Jańajol rayonı"
+        },
+        "soato": 1727259,
+        "phoneCode": 0,
+        "order": 152
+      },
+      {
+        "id": "district_220",
+        "externalId": 220,
+        "name": {
+          "uz": "Тошкент тумани",
+          "ru": "Тошкент тумани",
+          "en": "Тошкент тумани",
+          "cyrl": "Тошкент тумани",
+          "kar": "Tashkent rayonı"
+        },
+        "soato": 1727265,
+        "phoneCode": 0,
+        "order": 2019
+      },
+      {
+        "id": "yangyol_city",
+        "externalId": 221,
+        "name": {
+          "uz": "Yangiyo‘l shahar",
+          "ru": "Янгийўл шаҳар",
+          "en": "Yangyol city",
+          "cyrl": "Янгийўл шаҳар",
+          "kar": "Jańajol qalası"
+        },
+        "soato": 1727424,
+        "phoneCode": 0,
+        "order": 2019
+      },
+      {
+        "id": "district_222",
+        "externalId": 222,
+        "name": {
+          "uz": "Оҳангарон шаҳар",
+          "ru": "Оҳангарон шаҳар",
+          "en": "Оҳангарон шаҳар",
+          "cyrl": "Оҳангарон шаҳар",
+          "kar": "Ahangaran qalası"
+        },
+        "soato": 1727415,
+        "phoneCode": 0,
+        "order": 2019
+      },
+      {
+        "id": "nurafshan_city",
+        "externalId": 223,
+        "name": {
+          "uz": "Nurafshon shahar",
+          "ru": "Нурафшанский район",
+          "en": "Nurafshan city",
+          "cyrl": "Нурафшон шаҳар",
+          "kar": "Nurafshan qalası "
+        },
+        "soato": 1727401,
+        "phoneCode": 0,
+        "order": 2019
+      }
+    ]
+  },
+  {
+    "id": "qashqadaryo",
+    "externalId": 18,
+    "name": {
+      "uz": "Qashqadaryo viloyati",
+      "ru": "Кашкадарьинская область",
+      "en": "Qashqadaryo region"
+    },
+    "districts": [
+      {
+        "id": "kokdala_district",
+        "externalId": 9,
+        "name": {
+          "uz": "Ko'kdala tumani",
+          "ru": "Кокдалинский район",
+          "en": "Kokdala district",
+          "cyrl": "Кўкдала тумани",
+          "kar": "Kókdala rayonı "
+        },
+        "soato": 1710240,
+        "phoneCode": 0,
+        "order": 2022
+      },
+      {
+        "id": "karshi_city",
+        "externalId": 158,
+        "name": {
+          "uz": "Qarshi shahar",
+          "ru": "г. Карши",
+          "en": "Karshi city",
+          "cyrl": "Қарши шаҳар",
+          "kar": "Qarshı qalası"
+        },
+        "soato": 1710401,
+        "phoneCode": 0,
+        "order": 58
+      },
+      {
+        "id": "guzar_district",
+        "externalId": 159,
+        "name": {
+          "uz": "G’uzor tumani",
+          "ru": "Гузарский район",
+          "en": "Guzar district",
+          "cyrl": "Ғузор тумани",
+          "kar": "Gúzar rayonı"
+        },
+        "soato": 1710207,
+        "phoneCode": 0,
+        "order": 59
+      },
+      {
+        "id": "karshi_district",
+        "externalId": 160,
+        "name": {
+          "uz": "Qarshi tumani",
+          "ru": "Каршинский район",
+          "en": "Karshi district",
+          "cyrl": "Қарши тумани",
+          "kar": "Qarshı rayonı"
+        },
+        "soato": 1710224,
+        "phoneCode": 0,
+        "order": 60
+      },
+      {
+        "id": "kasbi_district",
+        "externalId": 161,
+        "name": {
+          "uz": "Kasbi tumani",
+          "ru": "Касбинский район",
+          "en": "Kasbi district",
+          "cyrl": "Касби тумани",
+          "kar": "Kasbi rayonı"
+        },
+        "soato": 1710237,
+        "phoneCode": 0,
+        "order": 61
+      },
+      {
+        "id": "koson_district",
+        "externalId": 162,
+        "name": {
+          "uz": "Koson tumani",
+          "ru": "Касанский район",
+          "en": "Koson district",
+          "cyrl": "Косон тумани",
+          "kar": "Kasan rayonı"
+        },
+        "soato": 1710229,
+        "phoneCode": 0,
+        "order": 62
+      },
+      {
+        "id": "kitob_district",
+        "externalId": 163,
+        "name": {
+          "uz": "Kitob tumani",
+          "ru": "Китабский район",
+          "en": "Kitob district",
+          "cyrl": "Китоб тумани",
+          "kar": "Kitab rayonı"
+        },
+        "soato": 1710232,
+        "phoneCode": 0,
+        "order": 63
+      },
+      {
+        "id": "mirishkor_district",
+        "externalId": 164,
+        "name": {
+          "uz": "Mirishkor tumani",
+          "ru": "Миришкорский район",
+          "en": "Mirishkor district",
+          "cyrl": "Миришкор тумани",
+          "kar": "Mirishkar rayonı"
+        },
+        "soato": 1710233,
+        "phoneCode": 0,
+        "order": 64
+      },
+      {
+        "id": "mubarak_district",
+        "externalId": 165,
+        "name": {
+          "uz": "Muborak tumani",
+          "ru": "Мубарекский район",
+          "en": "Mubarak district",
+          "cyrl": "Муборак тумани",
+          "kar": "Múbárek rayonı"
+        },
+        "soato": 1710234,
+        "phoneCode": 0,
+        "order": 65
+      },
+      {
+        "id": "nishan_district",
+        "externalId": 166,
+        "name": {
+          "uz": "Nishon tumani",
+          "ru": "Нишанский район",
+          "en": "Nishan district",
+          "cyrl": "Нишон тумани",
+          "kar": "Nishan rayonı"
+        },
+        "soato": 1710235,
+        "phoneCode": 0,
+        "order": 66
+      },
+      {
+        "id": "chirakchi_district",
+        "externalId": 167,
+        "name": {
+          "uz": "Chiroqchi tumani",
+          "ru": "Чиракчинский район",
+          "en": "Chirakchi district",
+          "cyrl": "Чироқчи тумани",
+          "kar": "Shıraqshı rayonı"
+        },
+        "soato": 1710242,
+        "phoneCode": 0,
+        "order": 67
+      },
+      {
+        "id": "shakhrisabz_district",
+        "externalId": 168,
+        "name": {
+          "uz": "Shaxrisabz tumani",
+          "ru": "Шахрисабзский район",
+          "en": "Shakhrisabz district",
+          "cyrl": "Шахрисабз тумани",
+          "kar": "Shaxrisabz rayonı"
+        },
+        "soato": 1710245,
+        "phoneCode": 0,
+        "order": 68
+      },
+      {
+        "id": "kamashi_district",
+        "externalId": 170,
+        "name": {
+          "uz": "Qamashi tumani",
+          "ru": "Камашинский район",
+          "en": "Kamashi district",
+          "cyrl": "Қамаши тумани",
+          "kar": "Qamashı rayonı"
+        },
+        "soato": 1710220,
+        "phoneCode": 0,
+        "order": 69
+      },
+      {
+        "id": "dehqonobod_district",
+        "externalId": 171,
+        "name": {
+          "uz": "Dexqonobod tumani",
+          "ru": "Дехканабадский район",
+          "en": "Dehqonobod district",
+          "cyrl": "Дехқонобод тумани",
+          "kar": "Dıyqanabad rayonı;"
+        },
+        "soato": 1710212,
+        "phoneCode": 0,
+        "order": 70
+      },
+      {
+        "id": "yakkabag_district",
+        "externalId": 172,
+        "name": {
+          "uz": "Yakkabog’ tumani",
+          "ru": "Яккабакский район",
+          "en": "Yakkabag district",
+          "cyrl": "Яккабоғ тумани",
+          "kar": "Jekebaǵ rayonı"
+        },
+        "soato": 1710250,
+        "phoneCode": 0,
+        "order": 71
+      },
+      {
+        "id": "shakhrisabz_city",
+        "externalId": 219,
+        "name": {
+          "uz": "Shaxrisabz shahar",
+          "ru": "г. Шахрисабз",
+          "en": "Shakhrisabz city",
+          "cyrl": "Шахрисабз шаҳар",
+          "kar": "Shaxrisabz qalası"
+        },
+        "soato": 1710405,
+        "phoneCode": 0,
+        "order": 2019
+      }
+    ]
+  },
+  {
+    "id": "jizzax",
+    "externalId": 19,
+    "name": {
+      "uz": "Jizzax viloyati",
+      "ru": "Джизакская область",
+      "en": "Jizzax region"
+    },
+    "districts": [
+      {
+        "id": "jizzakh_city",
+        "externalId": 173,
+        "name": {
+          "uz": "Jizzax shahar",
+          "ru": "г. Джизак",
+          "en": "Jizzakh city",
+          "cyrl": "Жиззах шаҳар",
+          "kar": "Jizzax qalası"
+        },
+        "soato": 1708401,
+        "phoneCode": 0,
+        "order": 45
+      },
+      {
+        "id": "bakhmal_district",
+        "externalId": 174,
+        "name": {
+          "uz": "Baxmal tumani",
+          "ru": "Бахмальский район",
+          "en": "Bakhmal district",
+          "cyrl": "Бахмал тумани",
+          "kar": "Baxmal rayonı"
+        },
+        "soato": 1708204,
+        "phoneCode": 0,
+        "order": 46
+      },
+      {
+        "id": "dustlik_district",
+        "externalId": 175,
+        "name": {
+          "uz": "Do’stlik tumani",
+          "ru": "Дустликский район",
+          "en": "Dustlik district",
+          "cyrl": "Дўстлик тумани",
+          "kar": "Doslıq rayonı"
+        },
+        "soato": 1708215,
+        "phoneCode": 0,
+        "order": 47
+      },
+      {
+        "id": "gallaorol_district",
+        "externalId": 176,
+        "name": {
+          "uz": "G’allaorol tumani",
+          "ru": "Галляаральский район",
+          "en": "Gallaorol district",
+          "cyrl": "Ғаллаорол тумани",
+          "kar": "Ǵállearal rayonı"
+        },
+        "soato": 1708209,
+        "phoneCode": 0,
+        "order": 48
+      },
+      {
+        "id": "sharof_rashidov_district",
+        "externalId": 177,
+        "name": {
+          "uz": "Sharof Rashidov tumani",
+          "ru": "Шараф-Рашидов район",
+          "en": "Sharof Rashidov district",
+          "cyrl": "Шароф Рашидов тумани",
+          "kar": "Jizzax rayonı"
+        },
+        "soato": 1708212,
+        "phoneCode": 0,
+        "order": 49
+      },
+      {
+        "id": "zarbdor_district",
+        "externalId": 178,
+        "name": {
+          "uz": "Zarbdor tumani",
+          "ru": "Зарбдорский район",
+          "en": "Zarbdor district",
+          "cyrl": "Зарбдор тумани",
+          "kar": "Zarbdar rayonı"
+        },
+        "soato": 1708220,
+        "phoneCode": 0,
+        "order": 50
+      },
+      {
+        "id": "zafarobod_district",
+        "externalId": 179,
+        "name": {
+          "uz": "Zafarobod tumani",
+          "ru": "Зафарабадский район",
+          "en": "Zafarobod district",
+          "cyrl": "Зафаробод тумани",
+          "kar": "Zafarabad rayonı"
+        },
+        "soato": 1708225,
+        "phoneCode": 0,
+        "order": 51
+      },
+      {
+        "id": "zaamin_district",
+        "externalId": 180,
+        "name": {
+          "uz": "Zomin tumani",
+          "ru": "Зааминский район",
+          "en": "Zaamin district",
+          "cyrl": "Зомин тумани",
+          "kar": "Zamin rayonı"
+        },
+        "soato": 1708218,
+        "phoneCode": 0,
+        "order": 52
+      },
+      {
+        "id": "pakhtakor_district",
+        "externalId": 181,
+        "name": {
+          "uz": "Paxtakor tumani",
+          "ru": "Пахтакорский район",
+          "en": "Pakhtakor district",
+          "cyrl": "Пахтакор тумани",
+          "kar": "Paxtakor rayonı"
+        },
+        "soato": 1708228,
+        "phoneCode": 0,
+        "order": 53
+      },
+      {
+        "id": "mirzachul_district",
+        "externalId": 182,
+        "name": {
+          "uz": "Mirzacho’l tumani",
+          "ru": "Мирзачульский район",
+          "en": "Mirzachul district",
+          "cyrl": "Мирзачўл тумани",
+          "kar": "Mırzashól rayonı"
+        },
+        "soato": 1708223,
+        "phoneCode": 0,
+        "order": 54
+      },
+      {
+        "id": "forish_district",
+        "externalId": 183,
+        "name": {
+          "uz": "Forish tumani",
+          "ru": "Фаришский район",
+          "en": "Forish district",
+          "cyrl": "Фориш тумани",
+          "kar": "Forish rayonı"
+        },
+        "soato": 1708235,
+        "phoneCode": 0,
+        "order": 55
+      },
+      {
+        "id": "yangiobod_district",
+        "externalId": 184,
+        "name": {
+          "uz": "Yangiobod tumani",
+          "ru": "Янгиабадский район",
+          "en": "Yangiobod district",
+          "cyrl": "Янгиобод тумани",
+          "kar": "Jańaabad rayonı"
+        },
+        "soato": 1708237,
+        "phoneCode": 0,
+        "order": 56
+      },
+      {
+        "id": "arnasay_district",
+        "externalId": 211,
+        "name": {
+          "uz": "Arnasoy tumani",
+          "ru": "Арнасайский район",
+          "en": "Arnasay district",
+          "cyrl": "Арнасой тумани",
+          "kar": "Arnasay rayonı"
+        },
+        "soato": 1708201,
+        "phoneCode": 0,
+        "order": 57
+      }
+    ]
+  },
+  {
+    "id": "namangan",
+    "externalId": 21,
+    "name": {
+      "uz": "Namangan viloyati",
+      "ru": "Наманганская область",
+      "en": "Namangan region"
+    },
+    "districts": [
+      {
+        "id": "yangi_namangan_tumani",
+        "externalId": 7,
+        "name": {
+          "uz": "Yangi Namangan tumani",
+          "ru": "Янги Наманган тумани",
+          "en": "Yangi Namangan tumani",
+          "cyrl": "Янги Наманган тумани",
+          "kar": "Jańa Namangan rayonı "
+        },
+        "soato": 1714401367,
+        "phoneCode": 0,
+        "order": 82
+      },
+      {
+        "id": "namangan_city",
+        "externalId": 185,
+        "name": {
+          "uz": "Namangan shahar",
+          "ru": "г. Наманган",
+          "en": "Namangan city",
+          "cyrl": "Наманган шаҳар",
+          "kar": "Namangan qalası "
+        },
+        "soato": 1714401,
+        "phoneCode": 0,
+        "order": 82
+      },
+      {
+        "id": "mingbulak_district",
+        "externalId": 186,
+        "name": {
+          "uz": "Mingbuloq tumani",
+          "ru": "Мингбулакский район",
+          "en": "Mingbulak district",
+          "cyrl": "Мингбулоқ тумани",
+          "kar": "Mıńbulaq rayonı"
+        },
+        "soato": 1714204,
+        "phoneCode": 0,
+        "order": 83
+      },
+      {
+        "id": "pop_district",
+        "externalId": 189,
+        "name": {
+          "uz": "Pop tumani",
+          "ru": "Папский район",
+          "en": "Pop district",
+          "cyrl": "Поп тумани",
+          "kar": "Pop rayonı"
+        },
+        "soato": 1714219,
+        "phoneCode": 0,
+        "order": 84
+      },
+      {
+        "id": "norin_district",
+        "externalId": 190,
+        "name": {
+          "uz": "Norin tumani",
+          "ru": "Нарынский район",
+          "en": "Norin district",
+          "cyrl": "Норин тумани",
+          "kar": "Narın rayonı"
+        },
+        "soato": 1714216,
+        "phoneCode": 0,
+        "order": 85
+      },
+      {
+        "id": "turakurgan_district",
+        "externalId": 191,
+        "name": {
+          "uz": "To’raqo’rg’on tumani",
+          "ru": "Туракурганский район",
+          "en": "Turakurgan district",
+          "cyrl": "Тўрақўрғон тумани",
+          "kar": "Tóreqorǵan rayonı"
+        },
+        "soato": 1714224,
+        "phoneCode": 0,
+        "order": 86
+      },
+      {
+        "id": "uychi_district",
+        "externalId": 192,
+        "name": {
+          "uz": "Uychi tumani",
+          "ru": "Уйчинский район",
+          "en": "Uychi district",
+          "cyrl": "Уйчи тумани",
+          "kar": "Úyshi rayonı"
+        },
+        "soato": 1714229,
+        "phoneCode": 0,
+        "order": 87
+      },
+      {
+        "id": "chartak_district",
+        "externalId": 194,
+        "name": {
+          "uz": "Chortoq tumani",
+          "ru": "Чартакский район",
+          "en": "Chartak district",
+          "cyrl": "Чортоқ тумани",
+          "kar": "Shortoq rayonı"
+        },
+        "soato": 1714236,
+        "phoneCode": 0,
+        "order": 88
+      },
+      {
+        "id": "chust_district",
+        "externalId": 195,
+        "name": {
+          "uz": "Chust tumani",
+          "ru": "Чустский район",
+          "en": "Chust district",
+          "cyrl": "Чуст тумани",
+          "kar": "Shust rayonı"
+        },
+        "soato": 1714237,
+        "phoneCode": 0,
+        "order": 89
+      },
+      {
+        "id": "yangikurgan_district",
+        "externalId": 196,
+        "name": {
+          "uz": "Yangiqo’rg’on tumani",
+          "ru": "Янгикурганский район",
+          "en": "Yangikurgan district",
+          "cyrl": "Янгиқўрғон тумани",
+          "kar": "Jańaqorǵan rayonı"
+        },
+        "soato": 1714242,
+        "phoneCode": 0,
+        "order": 90
+      },
+      {
+        "id": "namangan_district",
+        "externalId": 214,
+        "name": {
+          "uz": "Namangan tumani",
+          "ru": "Наманганский район",
+          "en": "Namangan district",
+          "cyrl": "Наманган тумани",
+          "kar": "Namangan rayonı"
+        },
+        "soato": 1714212,
+        "phoneCode": 0,
+        "order": 91
+      },
+      {
+        "id": "uchkurgan_district",
+        "externalId": 215,
+        "name": {
+          "uz": "Uchqo’rg’on tumani",
+          "ru": "Ускурганский район",
+          "en": "Uchkurgan district",
+          "cyrl": "Учқўрғон тумани",
+          "kar": "Ushqorǵan rayonı"
+        },
+        "soato": 1714234,
+        "phoneCode": 0,
+        "order": 92
+      },
+      {
+        "id": "kosonsoy_district",
+        "externalId": 216,
+        "name": {
+          "uz": "Kosonsoy tumani",
+          "ru": "Касанский район",
+          "en": "Kosonsoy district",
+          "cyrl": "Косонсой тумани",
+          "kar": "Kosonsoy rayonı"
+        },
+        "soato": 1714207,
+        "phoneCode": 0,
+        "order": 93
+      },
+      {
+        "id": "davlatobod_district",
+        "externalId": 226,
+        "name": {
+          "uz": "Davlatobod tumani",
+          "ru": "Давлатабадский район",
+          "en": "Davlatobod district",
+          "cyrl": "Давлатобод тумани",
+          "kar": "Dáwletabad rayonı"
+        },
+        "soato": 1714401365,
+        "phoneCode": 0,
+        "order": 226
+      }
+    ]
+  },
+  {
+    "id": "toshkent_shahri",
+    "externalId": 22,
+    "name": {
+      "uz": "Toshkent shahri",
+      "ru": "город Ташкент",
+      "en": "Tashkent city"
+    },
+    "districts": [
+      {
+        "id": "yunusobod_district",
+        "externalId": 198,
+        "name": {
+          "uz": "Yunusobod tumani",
+          "ru": "Юнусабадский район",
+          "en": "Yunusobod district",
+          "cyrl": "Юнусобод тумани",
+          "kar": "Yunusabad rayonı"
+        },
+        "soato": 1726266,
+        "phoneCode": 0,
+        "order": 184
+      },
+      {
+        "id": "mirabad_district",
+        "externalId": 199,
+        "name": {
+          "uz": "Mirobod tumani",
+          "ru": "Мирабадский район",
+          "en": "Mirabad district",
+          "cyrl": "Миробод тумани",
+          "kar": "Mirabad rayonı"
+        },
+        "soato": 1726273,
+        "phoneCode": 0,
+        "order": 185
+      },
+      {
+        "id": "yakkasaray_district",
+        "externalId": 200,
+        "name": {
+          "uz": "Yakkasaroy tumani",
+          "ru": "Яккасарайский район",
+          "en": "Yakkasaray district",
+          "cyrl": "Яккасарой тумани",
+          "kar": "Jekesaray rayonı"
+        },
+        "soato": 1726287,
+        "phoneCode": 71,
+        "order": 186
+      },
+      {
+        "id": "olmazor_district",
+        "externalId": 201,
+        "name": {
+          "uz": "Olmazor tumani",
+          "ru": "Алмазарский район",
+          "en": "Olmazor district",
+          "cyrl": "Олмазор тумани",
+          "kar": "Almazar rayonı"
+        },
+        "soato": 1726280,
+        "phoneCode": 0,
+        "order": 187
+      },
+      {
+        "id": "bektemir_district",
+        "externalId": 202,
+        "name": {
+          "uz": "Bektemir tumani",
+          "ru": "Бектемирский район",
+          "en": "Bektemir district",
+          "cyrl": "Бектемир тумани",
+          "kar": "Bektemir rayonı"
+        },
+        "soato": 1726264,
+        "phoneCode": 0,
+        "order": 188
+      },
+      {
+        "id": "yashnobod_district",
+        "externalId": 203,
+        "name": {
+          "uz": "Yashnobod tumani",
+          "ru": "Яшанабадский район",
+          "en": "Yashnobod district",
+          "cyrl": "Яшнобод тумани",
+          "kar": "Yashnabad rayonı"
+        },
+        "soato": 1726290,
+        "phoneCode": 0,
+        "order": 189
+      },
+      {
+        "id": "chilanzar_district",
+        "externalId": 204,
+        "name": {
+          "uz": "Chilonzor tumani",
+          "ru": "Чиланзарский район",
+          "en": "Chilanzar district",
+          "cyrl": "Чилонзор тумани",
+          "kar": "Shilanzar rayonı"
+        },
+        "soato": 1726294,
+        "phoneCode": 0,
+        "order": 190
+      },
+      {
+        "id": "uchtepa_district",
+        "externalId": 205,
+        "name": {
+          "uz": "Uchtepa tumani",
+          "ru": "Учтепинский район",
+          "en": "Uchtepa district",
+          "cyrl": "Учтепа тумани",
+          "kar": "Úshtóbe rayonı"
+        },
+        "soato": 1726262,
+        "phoneCode": 0,
+        "order": 191
+      },
+      {
+        "id": "mirzo_ulugbek_district",
+        "externalId": 207,
+        "name": {
+          "uz": "Mirzo Ulug’bek tumani",
+          "ru": "Мирзо- Улугбекский район",
+          "en": "Mirzo Ulugbek district",
+          "cyrl": "Мирзо Улуғбек тумани",
+          "kar": "Mırza Uluǵbek rayonı"
+        },
+        "soato": 1726269,
+        "phoneCode": 0,
+        "order": 192
+      },
+      {
+        "id": "sergeli_district",
+        "externalId": 208,
+        "name": {
+          "uz": "Sergeli tumani",
+          "ru": "Сергелийский район",
+          "en": "Sergeli district",
+          "cyrl": "Сергели тумани",
+          "kar": "Sergeli rayonı"
+        },
+        "soato": 1726283,
+        "phoneCode": 0,
+        "order": 193
+      },
+      {
+        "id": "shaykhantakhur_district",
+        "externalId": 212,
+        "name": {
+          "uz": "Shayxontoxur tumanI",
+          "ru": "Шайхантохурский район",
+          "en": "Shaykhantakhur district",
+          "cyrl": "Шайхонтохур тумани",
+          "kar": "Shayxantaxir rayonı"
+        },
+        "soato": 1726277,
+        "phoneCode": 0,
+        "order": 194
+      },
+      {
+        "id": "yangihayot_district",
+        "externalId": 225,
+        "name": {
+          "uz": "Yangihayot tumani",
+          "ru": "Янгихаятский район",
+          "en": "Yangihayot district",
+          "cyrl": "Янгиҳаёт тумани",
+          "kar": "Yangihayat rayonı"
+        },
+        "soato": 1726292,
+        "phoneCode": 0,
+        "order": 205
+      }
+    ]
+  }
+]

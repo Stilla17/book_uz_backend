@@ -25,13 +25,6 @@ const CategorySchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true, trim: true },
     title: { type: localizedStringSchema, required: true },
     subgenres: { type: [subgenreSchema], default: [] },
-    icon: { type: String, default: "" },
-    image: { type: String, default: "" },
-    description: {
-      uz: { type: String },
-      ru: { type: String },
-      en: { type: String },
-    },
     order: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false }, // Tanlangan kategoriya

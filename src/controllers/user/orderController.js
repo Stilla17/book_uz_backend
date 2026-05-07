@@ -2,6 +2,8 @@ const Order = require('../../models/Order');
 const orderService = require('../../services/orderService');
 const socketEvents = require('../../sockets/events');
 const apiResponse = require('../../utils/apiResponse');
+const { buildClickUrl } = require('../../payment/click/clickService');
+const { buildPaymeUrl } = require('../../payment/payme/paymeService');
 
 
 /**
@@ -10,11 +12,30 @@ const apiResponse = require('../../utils/apiResponse');
 
 const placeOrder = async (req, res, next) => {
   try {
-    const order = await orderService.createOrder(req.user._id, req.body);
+    const order = await orderService.createOrder(req.user?._id || req.body.user || null, req.body);
+    const responseData = order.toObject ? order.toObject() : order;
+
+    if (order.paymentType === 'CLICK') {
+      const clickUrl = buildClickUrl(order._id.toString(), order.totalAmount);
+      responseData.clickUrl = clickUrl;
+      responseData.payment = {
+        type: 'CLICK_REDIRECT',
+        redirectUrl: clickUrl,
+      };
+    }
+
+    if (order.paymentType === 'PAYME') {
+      const paymeUrl = buildPaymeUrl(order._id.toString(), order.totalAmount);
+      responseData.paymeUrl = paymeUrl;
+      responseData.payment = {
+        type: 'PAYME_REDIRECT',
+        redirectUrl: paymeUrl,
+      };
+    }
     
     socketEvents.emitNewOrder(order);
 
-    apiResponse(res, 201, true, "Buyurtma muvaffaqiyatli qabul qilindi", order);
+    apiResponse(res, 201, true, "Buyurtma muvaffaqiyatli qabul qilindi", responseData);
   } catch (error) {
     next(error);
   }

@@ -3,6 +3,43 @@ const Product = require('../../models/Product');
 const slugify = require('../../utils/slugify');
 const apiResponse = require('../../utils/apiResponse');
 
+const getCategoryName = (category) => {
+  if (category.title?.uz) return category.title.uz;
+  if (typeof category.name === 'string') return category.name;
+  return category.name?.uz || '';
+};
+
+const getSubgenreName = (subgenre) => {
+  if (!subgenre) return '';
+  if (subgenre.title?.uz) return subgenre.title.uz;
+  if (typeof subgenre.name === 'string') return subgenre.name;
+  if (typeof subgenre === 'string') return subgenre;
+  return subgenre.name?.uz || '';
+};
+
+const getIdString = (value) => {
+  if (!value) return '';
+  if (value._id) return value._id.toString();
+  return value.toString();
+};
+
+const getCategorySubgenres = (category) => {
+  if (Array.isArray(category.subgenres) && category.subgenres.length) {
+    return category.subgenres;
+  }
+
+  if (!Array.isArray(category.subcategories)) {
+    return [];
+  }
+
+  return category.subcategories.map((subcategory, index) => ({
+    _id: category.subcategoryIds?.[index] || subcategory,
+    name: getSubgenreName(subcategory),
+    order: index,
+    isActive: true
+  }));
+};
+
 const parseMaybeJson = (value) => {
   if (!value) return undefined;
   return typeof value === 'string' ? JSON.parse(value) : value;
@@ -290,29 +327,39 @@ const getAllCategoriesAdmin = async (req, res, next) => {
     ]);
 
     const categoryCountMap = new Map(
-      categoryCounts.map((item) => [item._id.toString(), item.count])
+      categoryCounts
+        .filter((item) => item._id)
+        .map((item) => [getIdString(item._id), item.count])
     );
 
     const subcategoryCountMap = new Map(
-      subcategoryCounts.map((item) => [
-        `${item._id.category.toString()}:${item._id.subCategoryId.toString()}`,
-        item.count
-      ])
+      subcategoryCounts
+        .filter((item) => item._id?.category && item._id?.subCategoryId)
+        .map((item) => [
+          `${getIdString(item._id.category)}:${getIdString(item._id.subCategoryId)}`,
+          item.count
+        ])
     );
 
-    const categoriesWithCount = categories.map((category) => ({
-      ...category,
-      name: category.title?.uz || '',
-      bookCount: categoryCountMap.get(category._id.toString()) || 0,
-      subgenres: (category.subgenres || []).map((subgenre) => ({
-        ...subgenre,
-        name: subgenre.title?.uz || '',
-        bookCount: subcategoryCountMap.get(`${category._id.toString()}:${subgenre._id.toString()}`) || 0
-      }))
-    })).map((category) => ({
-      ...category,
-      subcategories: category.subgenres
-    }));
+    const categoriesWithCount = categories
+      .filter((category) => category._id)
+      .map((category) => {
+        const categoryId = getIdString(category._id);
+
+        return {
+          ...category,
+          name: getCategoryName(category),
+          bookCount: categoryCountMap.get(categoryId) || 0,
+          subgenres: getCategorySubgenres(category).filter(Boolean).map((subgenre) => ({
+            ...subgenre,
+            name: getSubgenreName(subgenre),
+            bookCount: subcategoryCountMap.get(`${categoryId}:${getIdString(subgenre._id)}`) || 0
+          }))
+        };
+      }).map((category) => ({
+        ...category,
+        subcategories: category.subgenres
+      }));
     
     apiResponse(res, 200, true, "Kategoriyalar ro'yxati", categoriesWithCount);
   } catch (error) { 

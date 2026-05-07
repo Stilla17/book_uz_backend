@@ -3,6 +3,43 @@ const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 
+const getCategoryName = (category) => {
+  if (category.title?.uz) return category.title.uz;
+  if (typeof category.name === 'string') return category.name;
+  return category.name?.uz || '';
+};
+
+const getSubgenreName = (subgenre) => {
+  if (!subgenre) return '';
+  if (subgenre.title?.uz) return subgenre.title.uz;
+  if (typeof subgenre.name === 'string') return subgenre.name;
+  if (typeof subgenre === 'string') return subgenre;
+  return subgenre.name?.uz || '';
+};
+
+const getIdString = (value) => {
+  if (!value) return '';
+  if (value._id) return value._id.toString();
+  return value.toString();
+};
+
+const getCategorySubgenres = (category) => {
+  if (Array.isArray(category.subgenres) && category.subgenres.length) {
+    return category.subgenres;
+  }
+
+  if (!Array.isArray(category.subcategories)) {
+    return [];
+  }
+
+  return category.subcategories.map((subcategory, index) => ({
+    _id: category.subcategoryIds?.[index] || subcategory,
+    name: getSubgenreName(subcategory),
+    order: index,
+    isActive: true
+  }));
+};
+
 const buildCategoryTree = async (filter = {}) => {
   const categories = await Category.find(filter).sort({ order: 1, createdAt: -1 }).lean();
 
@@ -10,7 +47,7 @@ const buildCategoryTree = async (filter = {}) => {
     return [];
   }
 
-  const categoryIds = categories.map((category) => category._id);
+  const categoryIds = categories.map((category) => category._id).filter(Boolean);
 
   const [categoryCounts, subcategoryCounts] = await Promise.all([
     Product.aggregate([
@@ -34,32 +71,38 @@ const buildCategoryTree = async (filter = {}) => {
   ]);
 
   const categoryCountMap = new Map(
-    categoryCounts.map((item) => [item._id.toString(), item.count])
+    categoryCounts
+      .filter((item) => item._id)
+      .map((item) => [getIdString(item._id), item.count])
   );
 
   const subcategoryCountMap = new Map(
-    subcategoryCounts.map((item) => [
-      `${item._id.category.toString()}:${item._id.subCategoryId.toString()}`,
-      item.count
-    ])
+    subcategoryCounts
+      .filter((item) => item._id?.category && item._id?.subCategoryId)
+      .map((item) => [
+        `${getIdString(item._id.category)}:${getIdString(item._id.subCategoryId)}`,
+        item.count
+      ])
   );
 
-  return categories.map((category) => {
-    const subgenres = Array.isArray(category.subgenres) ? category.subgenres : [];
+  return categories.filter((category) => category._id).map((category) => {
+    const subgenres = getCategorySubgenres(category);
+    const categoryId = getIdString(category._id);
 
     const normalizedSubgenres = subgenres
+      .filter(Boolean)
       .filter((subgenre) => subgenre.isActive !== false)
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((subgenre) => ({
         ...subgenre,
-        name: subgenre.title?.uz || '',
-        bookCount: subcategoryCountMap.get(`${category._id.toString()}:${subgenre._id.toString()}`) || 0
+        name: getSubgenreName(subgenre),
+        bookCount: subcategoryCountMap.get(`${categoryId}:${getIdString(subgenre._id)}`) || 0
       }));
 
     return {
       ...category,
-      name: category.title?.uz || '',
-      bookCount: categoryCountMap.get(category._id.toString()) || 0,
+      name: getCategoryName(category),
+      bookCount: categoryCountMap.get(categoryId) || 0,
       subgenres: normalizedSubgenres,
       subcategories: normalizedSubgenres
     };
@@ -140,15 +183,15 @@ const getCategoryBySlug = async (req, res, next) => {
 
     const categoryData = {
       ...category,
-      name: category.title?.uz || '',
+      name: getCategoryName(category),
       bookCount,
-      subgenres: (category.subgenres || [])
+      subgenres: getCategorySubgenres(category)
         .filter((subgenre) => subgenre.isActive !== false)
         .sort((a, b) => (a.order || 0) - (b.order || 0))
         .map((subgenre) => ({
           ...subgenre,
-          name: subgenre.title?.uz || '',
-          bookCount: subcategoryCountMap.get(subgenre._id.toString()) || 0
+          name: getSubgenreName(subgenre),
+          bookCount: subcategoryCountMap.get(getIdString(subgenre._id)) || 0
         }))
     };
 
