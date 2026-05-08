@@ -27,8 +27,7 @@ const routes = require("./routes/index");
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
   // startSyncCron(); // Server ishga tushganda Moysklad bilan sinxronizatsiyani boshlaymiz
-
-  syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
+  // syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
 });
 
 const app = express();

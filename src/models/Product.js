@@ -18,6 +18,16 @@ const ProductSchema = new mongoose.Schema(
     discountPrice: { type: Number, default: 0 },
     images: [{ type: String }],
     stock: { type: Number, default: 0 },
+    branchStocks: [
+      {
+        storeId: String,
+        storeName: String,
+        quantity: Number,
+        reserve: Number,
+        available: Number,
+        syncedAt: Date,
+      },
+    ],
     barcode: { type: String, trim: true, unique: true },
     year: { type: Number },
     cover: {
