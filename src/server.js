@@ -23,6 +23,7 @@ const { errorHandler } = require("./middlewares/error");
 const { initSocket } = require("./sockets/socket");
 
 const routes = require("./routes/index");
+const { openApiDocument, swaggerHtml } = require("./docs/swagger");
 
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
@@ -75,6 +76,14 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 /**
  * 3. ROUTES INTEGRATION
  */
+app.get("/api-docs.json", (req, res) => {
+  res.status(200).json(openApiDocument);
+});
+
+app.get("/api-docs", (req, res) => {
+  res.type("html").send(swaggerHtml);
+});
+
 app.use("/api/v1", routes);
 
 app.get("/", (req, res) => {

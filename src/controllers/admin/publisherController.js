@@ -1,5 +1,6 @@
 const Publisher = require("../../models/Publisher");
 const Product = require("../../models/Product");
+const apiResponse = require("../../utils/apiResponse");
 const slugify = require("../../utils/slugify");
 
 const parseMaybeJson = (value) => {
@@ -16,6 +17,25 @@ const parseMaybeJson = (value) => {
   }
 
   return value;
+};
+
+const buildPublisherQuery = (idOrSlug) => {
+  if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
+    return { _id: idOrSlug };
+  }
+
+  return { slug: idOrSlug };
+};
+
+const getPublisherBooksCount = async (publisher) => {
+  const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
+
+  return Product.countDocuments({
+    $or: [
+      { publisher: publisher._id },
+      ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
+    ],
+  });
 };
 
 // Yaratish Post
@@ -41,24 +61,41 @@ exports.createPublisher = async (req, res) => {
 // barcha nashryotlarni olish Get
 exports.getPublishers = async (req, res) => {
   try {
-    const publishers = await Publisher.find()
-      .populate({
-        path: "books",
-        select:
-          "title slug images price discountPrice author category subCategoryId",
-        populate: [
-          { path: "author", select: "name" },
-          { path: "category", select: "title subgenres" },
-        ],
-      })
-      .sort("name");
+    const { search, page = 1, limit = 50 } = req.query;
+    const normalizedLimit = Math.min(Number(limit) || 50, 100);
+    const normalizedPage = Number(page) || 1;
+    const skip = (normalizedPage - 1) * normalizedLimit;
 
-    const data = publishers.map((publisher) => ({
-      ...publisher.toObject(),
-      booksCount: publisher.books?.length || 0,
-    }));
+    const filter = {};
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
 
-    res.status(200).json({ success: true, data });
+    const [publishers, total] = await Promise.all([
+      Publisher.find(filter)
+        .sort("name")
+        .skip(skip)
+        .limit(normalizedLimit)
+        .lean(),
+      Publisher.countDocuments(filter),
+    ]);
+
+    const publishersWithBookCount = await Promise.all(
+      publishers.map(async (publisher) => ({
+        ...publisher,
+        booksCount: await getPublisherBooksCount(publisher),
+      })),
+    );
+
+    return apiResponse(res, 200, true, "Nashriyotlar ro'yxati", {
+      publishers: publishersWithBookCount,
+      pagination: {
+        total,
+        page: normalizedPage,
+        pages: Math.ceil(total / normalizedLimit),
+        limit: normalizedLimit,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -94,6 +131,9 @@ exports.deletePublisher = async (req, res) => {
 exports.updatePublisher = async (req, res) => {
   try {
     const updateData = { ...req.body };
+    if (req.file) {
+      updateData.image = req.file.path;
+    }
     if (req.body.name && !req.body.slug) {
       updateData.slug = slugify(req.body.name);
     }
@@ -114,21 +154,19 @@ exports.updatePublisher = async (req, res) => {
 // bitta nashryotni olish Kitob bilan Get
 exports.getOne = async (req, res) => {
   try {
-    const publisher = await Publisher.findById(req.params.id).populate({
-      path: "books",
-      select:
-        "title slug images price discountPrice author category subCategoryId",
-      populate: [
-        { path: "author", select: "name" },
-        { path: "category", select: "title subgenres" },
-      ],
-    });
+    const publisher = await Publisher.findOne(buildPublisherQuery(req.params.id)).lean();
+
     if (!publisher)
-      return res.status(404).json({ success: false, message: "Topilmadi" });
-    res.json({ success: true, data: publisher });
+      return apiResponse(res, 404, false, "Nashriyot topilmadi");
+
+    const booksCount = await getPublisherBooksCount(publisher);
+
+    return apiResponse(res, 200, true, "Nashriyot ma'lumotlari", {
+      ...publisher,
+      booksCount,
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-
 

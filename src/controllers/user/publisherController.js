@@ -47,14 +47,6 @@ const getAllPublishers = async (req, res, next) => {
       Publisher.countDocuments(filter)
     ]);
 
-    const totalProductsWithoutPublisher = await Product.countDocuments({
-      $or: [
-        { publisher: { $exists: false } },
-        { publisher: null }
-      ]
-    });
-    const useDefaultPublisherFallback = total === 1;
-
     const publishersWithBookCount = await Promise.all(
       publishers.map(async (publisher) => {
         const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
@@ -62,17 +54,12 @@ const getAllPublishers = async (req, res, next) => {
           $or: [
             { publisher: publisher._id },
             ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-            ...(useDefaultPublisherFallback
-              ? [{ publisher: { $exists: false } }, { publisher: null }]
-              : [])
           ]
         });
 
         return {
           ...publisher,
-          booksCount: useDefaultPublisherFallback
-            ? Math.max(booksCount, totalProductsWithoutPublisher)
-            : booksCount
+          booksCount
         };
       })
     );
@@ -100,14 +87,10 @@ const getPublisherByIdOrSlug = async (req, res, next) => {
     }
 
     const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
-    const useDefaultPublisherFallback = await Publisher.countDocuments() === 1;
     const booksCount = await Product.countDocuments({
       $or: [
         { publisher: publisher._id },
         ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-        ...(useDefaultPublisherFallback
-          ? [{ publisher: { $exists: false } }, { publisher: null }]
-          : [])
       ]
     });
 
@@ -132,14 +115,10 @@ const getPublisherProducts = async (req, res, next) => {
     }
 
     const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
-    const useDefaultPublisherFallback = await Publisher.countDocuments() === 1;
     const filter = {
       $or: [
         { publisher: publisher._id },
         ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-        ...(useDefaultPublisherFallback
-          ? [{ publisher: { $exists: false } }, { publisher: null }]
-          : [])
       ]
     };
 

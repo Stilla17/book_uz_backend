@@ -1,24 +1,24 @@
-const Category = require('../../models/Category');
-const Product = require('../../models/Product');
-const slugify = require('../../utils/slugify');
-const apiResponse = require('../../utils/apiResponse');
+const Category = require("../../models/Category");
+const Product = require("../../models/Product");
+const slugify = require("../../utils/slugify");
+const apiResponse = require("../../utils/apiResponse");
 
 const getCategoryName = (category) => {
   if (category.title?.uz) return category.title.uz;
-  if (typeof category.name === 'string') return category.name;
-  return category.name?.uz || '';
+  if (typeof category.name === "string") return category.name;
+  return category.name?.uz || "";
 };
 
 const getSubgenreName = (subgenre) => {
-  if (!subgenre) return '';
+  if (!subgenre) return "";
   if (subgenre.title?.uz) return subgenre.title.uz;
-  if (typeof subgenre.name === 'string') return subgenre.name;
-  if (typeof subgenre === 'string') return subgenre;
-  return subgenre.name?.uz || '';
+  if (typeof subgenre.name === "string") return subgenre.name;
+  if (typeof subgenre === "string") return subgenre;
+  return subgenre.name?.uz || "";
 };
 
 const getIdString = (value) => {
-  if (!value) return '';
+  if (!value) return "";
   if (value._id) return value._id.toString();
   return value.toString();
 };
@@ -36,13 +36,13 @@ const getCategorySubgenres = (category) => {
     _id: category.subcategoryIds?.[index] || subcategory,
     name: getSubgenreName(subcategory),
     order: index,
-    isActive: true
+    isActive: true,
   }));
 };
 
 const parseMaybeJson = (value) => {
   if (!value) return undefined;
-  return typeof value === 'string' ? JSON.parse(value) : value;
+  return typeof value === "string" ? JSON.parse(value) : value;
 };
 
 const getPayload = (req) => req.body || {};
@@ -57,7 +57,7 @@ const normalizeSubgenres = (payload, category = null) => {
 
   return rawSubgenres.map((subgenre, index) => {
     const title = subgenre.title || subgenre.name;
-    const candidateSlug = subgenre.slug || slugify(title?.uz || '');
+    const candidateSlug = subgenre.slug || slugify(title?.uz || "");
     const existingSubgenre = subgenre._id
       ? category?.subgenres.id(subgenre._id)
       : category?.subgenres.find((item) => item.slug === candidateSlug);
@@ -72,9 +72,10 @@ const normalizeSubgenres = (payload, category = null) => {
       title: title || existingSubgenre?.title,
       books,
       order: Number(subgenre.order ?? existingSubgenre?.order ?? index),
-      isActive: subgenre.isActive === undefined
-        ? existingSubgenre?.isActive !== false
-        : subgenre.isActive === 'true' || subgenre.isActive === true
+      isActive:
+        subgenre.isActive === undefined
+          ? existingSubgenre?.isActive !== false
+          : subgenre.isActive === "true" || subgenre.isActive === true,
     };
 
     if (subgenre._id || existingSubgenre?._id) {
@@ -96,23 +97,33 @@ const createCategory = async (req, res, next) => {
     const titleObj = normalizeCategoryTitle(payload);
 
     if (!Object.keys(payload).length && !req.files) {
-      return apiResponse(res, 400, false, "Body bo'sh yuborildi. Postman'da Body -> form-data tanlang.");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Body bo'sh yuborildi. Postman'da Body -> form-data tanlang.",
+      );
     }
 
     if (!titleObj?.uz || !titleObj?.ru || !titleObj?.en) {
-      return apiResponse(res, 400, false, "title[uz], title[ru], title[en] majburiy");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "title[uz], title[ru], title[en] majburiy",
+      );
     }
 
     const slug = payload.slug || slugify(titleObj.uz);
-    
+
     let descriptionObj = {};
     if (description) {
       descriptionObj = parseMaybeJson(description);
     }
-    
-    let iconUrl = '';
-    let imageUrl = '';
-    
+
+    let iconUrl = "";
+    let imageUrl = "";
+
     if (req.files) {
       if (req.files.icon && req.files.icon.length > 0) {
         iconUrl = req.files.icon[0].path;
@@ -121,7 +132,7 @@ const createCategory = async (req, res, next) => {
         imageUrl = req.files.image[0].path;
       }
     }
-    
+
     const categoryData = {
       title: titleObj,
       slug,
@@ -130,16 +141,22 @@ const createCategory = async (req, res, next) => {
       icon: iconUrl,
       image: imageUrl,
       order: Number(order || 0),
-      isActive: isActive === 'true' || isActive === true,
-      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isActive: isActive === "true" || isActive === true,
+      isFeatured: isFeatured === "true" || isFeatured === true,
     };
-    
+
     const category = await Category.create(categoryData);
 
-    apiResponse(res, 201, true, "Kategoriya muvaffaqiyatli yaratildi", category);
-  } catch (error) { 
-    console.error('Kategoriya yaratishda xatolik:', error);
-    next(error); 
+    apiResponse(
+      res,
+      201,
+      true,
+      "Kategoriya muvaffaqiyatli yaratildi",
+      category,
+    );
+  } catch (error) {
+    console.error("Kategoriya yaratishda xatolik:", error);
+    next(error);
   }
 };
 
@@ -151,23 +168,40 @@ const addSubCategory = async (req, res, next) => {
   try {
     const payload = getPayload(req);
     const { categoryId } = payload;
-    
+
     const titleObj = normalizeCategoryTitle(payload);
     if (!Object.keys(payload).length) {
-      return apiResponse(res, 400, false, "Body bo'sh yuborildi. Postman'da Body -> raw -> JSON yuboring.");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Body bo'sh yuborildi. Postman'da Body -> raw -> JSON yuboring.",
+      );
     }
 
     if (!titleObj?.uz || !titleObj?.ru || !titleObj?.en) {
-      return apiResponse(res, 400, false, "title[uz], title[ru], title[en] majburiy");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "title[uz], title[ru], title[en] majburiy",
+      );
     }
 
     const slug = payload.slug || slugify(titleObj.uz);
 
     const category = await Category.findById(categoryId);
-    if (!category) return apiResponse(res, 404, false, "Asosiy kategoriya topilmadi");
+    if (!category)
+      return apiResponse(res, 404, false, "Asosiy kategoriya topilmadi");
 
-    const isExist = category.subgenres.find(sub => sub.slug === slug);
-    if (isExist) return apiResponse(res, 400, false, "Bunday sub-kategoriya allaqachon mavjud");
+    const isExist = category.subgenres.find((sub) => sub.slug === slug);
+    if (isExist)
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Bunday sub-kategoriya allaqachon mavjud",
+      );
 
     const books = Array.isArray(payload.books)
       ? payload.books
@@ -178,14 +212,17 @@ const addSubCategory = async (req, res, next) => {
       slug,
       books,
       order: Number(payload.order ?? category.subgenres.length),
-      isActive: payload.isActive === undefined ? true : payload.isActive === 'true' || payload.isActive === true
+      isActive:
+        payload.isActive === undefined
+          ? true
+          : payload.isActive === "true" || payload.isActive === true,
     });
     await category.save();
 
     apiResponse(res, 200, true, "Sub-kategoriya qo'shildi", category);
-  } catch (error) { 
-    console.error('Sub-kategoriya qo\'shishda xatolik:', error);
-    next(error); 
+  } catch (error) {
+    console.error("Sub-kategoriya qo'shishda xatolik:", error);
+    next(error);
   }
 };
 
@@ -198,30 +235,32 @@ const updateCategory = async (req, res, next) => {
     const { id } = req.params;
     const payload = getPayload(req);
     const { description, order, isActive, isFeatured } = payload;
-    
+
     const category = await Category.findById(id);
     if (!category) {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
-    
+
     const updateData = {};
-    
+
     const titleObj = normalizeCategoryTitle(payload);
     if (titleObj) {
       updateData.title = titleObj;
       updateData.slug = payload.slug || slugify(titleObj.uz);
     }
-    
+
     if (description) {
       updateData.description = parseMaybeJson(description);
     }
 
     const subgenres = normalizeSubgenres(payload, category);
     if (subgenres) updateData.subgenres = subgenres;
-    
+
     if (order !== undefined) updateData.order = Number(order);
-    if (isActive !== undefined) updateData.isActive = isActive === 'true' || isActive === true;
-    if (isFeatured !== undefined) updateData.isFeatured = isFeatured === 'true' || isFeatured === true;
+    if (isActive !== undefined)
+      updateData.isActive = isActive === "true" || isActive === true;
+    if (isFeatured !== undefined)
+      updateData.isFeatured = isFeatured === "true" || isFeatured === true;
 
     if (req.files) {
       if (req.files.icon && req.files.icon.length > 0) {
@@ -235,13 +274,13 @@ const updateCategory = async (req, res, next) => {
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true }
+      { new: true },
     );
 
     apiResponse(res, 200, true, "Kategoriya yangilandi", updatedCategory);
-  } catch (error) { 
-    console.error('Kategoriya yangilashda xatolik:', error);
-    next(error); 
+  } catch (error) {
+    console.error("Kategoriya yangilashda xatolik:", error);
+    next(error);
   }
 };
 
@@ -255,16 +294,21 @@ const deleteCategory = async (req, res, next) => {
 
     const hasProducts = await Product.findOne({ category: categoryId });
     if (hasProducts) {
-      return apiResponse(res, 400, false, "Kategoriyani o'chira olmaysiz, chunki unga bog'langan mahsulotlar mavjud!");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Kategoriyani o'chira olmaysiz, chunki unga bog'langan mahsulotlar mavjud!",
+      );
     }
 
     const category = await Category.findByIdAndDelete(categoryId);
     if (!category) return apiResponse(res, 404, false, "Kategoriya topilmadi");
 
     apiResponse(res, 200, true, "Kategoriya muvaffaqiyatli o'chirildi");
-  } catch (error) { 
-    console.error('Kategoriya o\'chirishda xatolik:', error);
-    next(error); 
+  } catch (error) {
+    console.error("Kategoriya o'chirishda xatolik:", error);
+    next(error);
   }
 };
 
@@ -278,21 +322,28 @@ const deleteSubCategory = async (req, res, next) => {
 
     const hasProducts = await Product.findOne({ subCategoryId: subId });
     if (hasProducts) {
-      return apiResponse(res, 400, false, "Sub-kategoriyada mahsulotlar bor, o'chirib bo'lmaydi");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Sub-kategoriyada mahsulotlar bor, o'chirib bo'lmaydi",
+      );
     }
 
     const category = await Category.findById(categoryId);
     if (!category) {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
-    
-    category.subgenres = category.subgenres.filter(sub => sub._id.toString() !== subId);
+
+    category.subgenres = category.subgenres.filter(
+      (sub) => sub._id.toString() !== subId,
+    );
     await category.save();
 
     apiResponse(res, 200, true, "Sub-kategoriya o'chirildi");
-  } catch (error) { 
-    console.error('Sub-kategoriya o\'chirishda xatolik:', error);
-    next(error); 
+  } catch (error) {
+    console.error("Sub-kategoriya o'chirishda xatolik:", error);
+    next(error);
   }
 };
 
@@ -302,69 +353,49 @@ const deleteSubCategory = async (req, res, next) => {
 
 const getAllCategoriesAdmin = async (req, res, next) => {
   try {
-    const categories = await Category.find().sort({ order: 1, createdAt: -1 }).lean();
-    const categoryIds = categories.map((category) => category._id);
+    const categories = await Category.find()
+      .sort({ order: 1, createdAt: -1 })
+      .lean();
 
-    const [categoryCounts, subcategoryCounts] = await Promise.all([
-      Product.aggregate([
-        { $match: { category: { $in: categoryIds } } },
-        { $group: { _id: '$category', count: { $sum: 1 } } }
-      ]),
-      Product.aggregate([
-        {
-          $match: {
-            category: { $in: categoryIds },
-            subCategoryId: { $exists: true, $ne: null }
-          }
-        },
-        {
-          $group: {
-            _id: { category: '$category', subCategoryId: '$subCategoryId' },
-            count: { $sum: 1 }
-          }
-        }
-      ])
-    ]);
+    const categoriesWithCount = await Promise.all(
+      categories
+        .filter((category) => category._id)
+        .map(async (category) => {
+          const subgenres = getCategorySubgenres(category)
+            .filter(Boolean)
+            .map((subgenre) => {
+              const books = Array.isArray(subgenre.books) ? subgenre.books : [];
+              return {
+                ...subgenre,
+                name: getSubgenreName(subgenre),
+                bookCount: books.length,
+              };
+            });
 
-    const categoryCountMap = new Map(
-      categoryCounts
-        .filter((item) => item._id)
-        .map((item) => [getIdString(item._id), item.count])
+          let categoryBookCount = subgenres.length
+            ? subgenres.reduce((sum, sg) => sum + sg.bookCount, 0)
+            : 0;
+
+          if (!subgenres.length) {
+            categoryBookCount = await Product.countDocuments({
+              category: category._id,
+            });
+          }
+
+          return {
+            ...category,
+            name: getCategoryName(category),
+            bookCount: categoryBookCount,
+            subgenres,
+            subcategories: subgenres,
+          };
+        }),
     );
 
-    const subcategoryCountMap = new Map(
-      subcategoryCounts
-        .filter((item) => item._id?.category && item._id?.subCategoryId)
-        .map((item) => [
-          `${getIdString(item._id.category)}:${getIdString(item._id.subCategoryId)}`,
-          item.count
-        ])
-    );
-
-    const categoriesWithCount = categories
-      .filter((category) => category._id)
-      .map((category) => {
-        const categoryId = getIdString(category._id);
-
-        return {
-          ...category,
-          name: getCategoryName(category),
-          bookCount: categoryCountMap.get(categoryId) || 0,
-          subgenres: getCategorySubgenres(category).filter(Boolean).map((subgenre) => ({
-            ...subgenre,
-            name: getSubgenreName(subgenre),
-            bookCount: subcategoryCountMap.get(`${categoryId}:${getIdString(subgenre._id)}`) || 0
-          }))
-        };
-      }).map((category) => ({
-        ...category,
-        subcategories: category.subgenres
-      }));
-    
     apiResponse(res, 200, true, "Kategoriyalar ro'yxati", categoriesWithCount);
-  } catch (error) { 
-    console.error('Kategoriyalarni yuklashda xatolik:', error);
-    next(error); 
+  } catch (error) {
+    console.error("Kategoriyalarni yuklashda xatolik:", error);
+    next(error);
   }
 };
 
@@ -378,11 +409,17 @@ const toggleCategoryStatus = async (req, res, next) => {
     if (!category) {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
-    
+
     category.isActive = !category.isActive;
     await category.save();
-    
-    apiResponse(res, 200, true, `Kategoriya ${category.isActive ? 'faollashtirildi' : 'faolsizlashtirildi'}`, category);
+
+    apiResponse(
+      res,
+      200,
+      true,
+      `Kategoriya ${category.isActive ? "faollashtirildi" : "faolsizlashtirildi"}`,
+      category,
+    );
   } catch (error) {
     next(error);
   }
@@ -398,11 +435,17 @@ const toggleCategoryFeatured = async (req, res, next) => {
     if (!category) {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
-    
+
     category.isFeatured = !category.isFeatured;
     await category.save();
-    
-    apiResponse(res, 200, true, `Kategoriya ${category.isFeatured ? 'tanlangan' : 'oddiy'} qilindi`, category);
+
+    apiResponse(
+      res,
+      200,
+      true,
+      `Kategoriya ${category.isFeatured ? "tanlangan" : "oddiy"} qilindi`,
+      category,
+    );
   } catch (error) {
     next(error);
   }
@@ -416,5 +459,5 @@ module.exports = {
   deleteSubCategory,
   getAllCategoriesAdmin,
   toggleCategoryStatus,
-  toggleCategoryFeatured
+  toggleCategoryFeatured,
 };

@@ -49,24 +49,36 @@ const buildCategoryTree = async (filter = {}) => {
 
   const categoryIds = categories.map((category) => category._id).filter(Boolean);
 
-  const [categoryCounts, subcategoryCounts] = await Promise.all([
-    Product.aggregate([
-      { $match: { category: { $in: categoryIds } } },
-      { $group: { _id: '$category', count: { $sum: 1 } } }
-    ]),
-    Product.aggregate([
-      {
-        $match: {
-          category: { $in: categoryIds },
-          subCategoryId: { $exists: true, $ne: null }
-        }
-      },
-      {
-        $group: {
-          _id: { category: '$category', subCategoryId: '$subCategoryId' },
-          count: { $sum: 1 }
+  const categoryMatch = {
+    $or: [
+      { category: { $in: categoryIds } },
+      { "category._id": { $in: categoryIds } },
+      { "category.id": { $in: categoryIds } }
+    ]
+  };
+
+  const normalizeCatId = {
+    $addFields: {
+      catId: {
+        $cond: {
+          if: { $eq: [{ $type: "$category" }, "object"] },
+          then: { $ifNull: ["$category._id", "$category.id"] },
+          else: "$category"
         }
       }
+    }
+  };
+
+  const [categoryCounts, subcategoryCounts] = await Promise.all([
+    Product.aggregate([
+      { $match: categoryMatch },
+      normalizeCatId,
+      { $group: { _id: '$catId', count: { $sum: 1 } } }
+    ]),
+    Product.aggregate([
+      { $match: { ...categoryMatch, subCategoryId: { $exists: true, $ne: null } } },
+      normalizeCatId,
+      { $group: { _id: { category: '$catId', subCategoryId: '$subCategoryId' }, count: { $sum: 1 } } }
     ])
   ]);
 
@@ -159,12 +171,30 @@ const getCategoryBySlug = async (req, res, next) => {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
 
+    const categoryId = category._id;
     const [bookCount, subcategoryCounts] = await Promise.all([
-      Product.countDocuments({ category: category._id }),
+      Product.countDocuments({
+        $or: [
+          { category: categoryId },
+          { "category._id": categoryId },
+          { "category.id": categoryId }
+        ]
+      }),
       Product.aggregate([
         {
+          $addFields: {
+            categoryId: {
+              $cond: {
+                if: { $eq: [{ $type: "$category" }, "object"] },
+                then: { $ifNull: ["$category._id", "$category.id"] },
+                else: "$category"
+              }
+            }
+          }
+        },
+        {
           $match: {
-            category: category._id,
+            categoryId,
             subCategoryId: { $exists: true, $ne: null }
           }
         },
