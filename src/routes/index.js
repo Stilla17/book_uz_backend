@@ -57,7 +57,7 @@ router.use("/locations", locationRoutes); // Region va districtlar uchun umumiy 
 router.use("/click", clickRoutes); // Click.uz uchun marshrutlar
 router.use("/payme", paymeRoutes); // Payme uchun marshrutlar
 
-/**
+/*
  * ADMIN MARSHRUTLARI
  */
 router.use("/admin/authors", adminAuthorRoutes); //

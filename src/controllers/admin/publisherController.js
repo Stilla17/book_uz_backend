@@ -2,6 +2,8 @@ const Publisher = require("../../models/Publisher");
 const Product = require("../../models/Product");
 const apiResponse = require("../../utils/apiResponse");
 const slugify = require("../../utils/slugify");
+const { getPaginationParams, buildPagination } = require("../../utils/pagination");
+const { buildSearchRegex } = require("../../utils/searchRegex");
 
 const parseMaybeJson = (value) => {
   if (value === undefined || value === null || value === "") {
@@ -61,21 +63,22 @@ exports.createPublisher = async (req, res) => {
 // barcha nashryotlarni olish Get
 exports.getPublishers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 50 } = req.query;
-    const normalizedLimit = Math.min(Number(limit) || 50, 100);
-    const normalizedPage = Number(page) || 1;
-    const skip = (normalizedPage - 1) * normalizedLimit;
+    const { search } = req.query;
+    const paginationParams = getPaginationParams(req.query, {
+      limit: 50,
+      maxLimit: 100,
+    });
 
     const filter = {};
     if (search) {
-      filter.name = { $regex: search, $options: "i" };
+      filter.name = buildSearchRegex(search);
     }
 
     const [publishers, total] = await Promise.all([
       Publisher.find(filter)
         .sort("name")
-        .skip(skip)
-        .limit(normalizedLimit)
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit)
         .lean(),
       Publisher.countDocuments(filter),
     ]);
@@ -89,12 +92,7 @@ exports.getPublishers = async (req, res) => {
 
     return apiResponse(res, 200, true, "Nashriyotlar ro'yxati", {
       publishers: publishersWithBookCount,
-      pagination: {
-        total,
-        page: normalizedPage,
-        pages: Math.ceil(total / normalizedLimit),
-        limit: normalizedLimit,
-      },
+      pagination: buildPagination({ ...paginationParams, total }),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -169,4 +167,3 @@ exports.getOne = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
-

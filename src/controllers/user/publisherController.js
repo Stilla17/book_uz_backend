@@ -2,6 +2,7 @@ const Publisher = require('../../models/Publisher');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { buildSearchRegex } = require('../../utils/searchRegex');
 
 const buildPublisherQuery = (idOrSlug) => {
   if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
@@ -35,7 +36,7 @@ const getAllPublishers = async (req, res, next) => {
 
     const filter = {};
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.name = buildSearchRegex(search);
     }
 
     const [publishers, total] = await Promise.all([

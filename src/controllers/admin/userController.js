@@ -1,6 +1,8 @@
 const User = require('../../models/User');
 const bcrypt = require('bcrypt');
 const apiResponse = require('../../utils/apiResponse');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
+const { buildSearchRegex } = require('../../utils/searchRegex');
 
 /**
  * 1. Barcha foydalanuvchilarni olish (Filtr va Pagination bilan)
@@ -8,30 +10,30 @@ const apiResponse = require('../../utils/apiResponse');
 
 const getAllUsersAdmin = async (req, res, next) => {
   try {
-    const { role, search, page = 1, limit = 10 } = req.query;
+    const { role, search } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     let filter = {};
     if (role) filter.role = role;
 
     if (search) {
+      const searchRegex = buildSearchRegex(search);
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { name: searchRegex },
+        { email: searchRegex }
       ];
     }
 
-    const skip = (page - 1) * limit;
     const users = await User.find(filter)
       .select('-password -refreshToken')
       .sort('-createdAt')
-      .skip(skip)
-      .limit(Number(limit));
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit);
 
     const total = await User.countDocuments(filter);
 
     apiResponse(res, 200, true, "Foydalanuvchilar ro'yxati", {
       users,
-      total,
-      pages: Math.ceil(total / limit)
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) { next(error); }
 };

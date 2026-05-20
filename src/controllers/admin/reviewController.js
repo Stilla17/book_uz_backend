@@ -1,6 +1,7 @@
 const Review = require('../../models/Review');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 
 /**
  * 1. Sharhlarni filtrlash (Hammasi, Faqat tasdiqlanmagan, Faqat yomon reyting)
@@ -8,27 +9,26 @@ const apiResponse = require('../../utils/apiResponse');
 
 const getAllReviewsAdmin = async (req, res, next) => {
   try {
-    const { status, rating, page = 1, limit = 10 } = req.query;
+    const { status, rating } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     let filter = {};
 
     if (status === 'pending') filter.isApproved = false;
     if (status === 'approved') filter.isApproved = true;
     if (rating) filter.rating = Number(rating);
 
-    const skip = (page - 1) * limit;
     const reviews = await Review.find(filter)
       .populate('user', 'name email avatar')
       .populate('product', 'title images')
       .sort('-createdAt')
-      .skip(skip)
-      .limit(Number(limit));
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit);
 
     const total = await Review.countDocuments(filter);
 
     apiResponse(res, 200, true, "Sharhlar ro'yxati", {
       reviews,
-      total,
-      pages: Math.ceil(total / limit)
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) { next(error); }
 };

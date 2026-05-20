@@ -2,6 +2,11 @@ const Category = require("../../models/Category");
 const Product = require("../../models/Product");
 const slugify = require("../../utils/slugify");
 const apiResponse = require("../../utils/apiResponse");
+const {
+  getPaginationParams,
+  buildPagination,
+} = require("../../utils/pagination");
+const { buildSearchRegex, normalizeSearchText } = require("../../utils/searchRegex");
 
 const getCategoryName = (category) => {
   if (category.title?.uz) return category.title.uz;
@@ -353,9 +358,38 @@ const deleteSubCategory = async (req, res, next) => {
 
 const getAllCategoriesAdmin = async (req, res, next) => {
   try {
-    const categories = await Category.find()
-      .sort({ order: 1, createdAt: -1 })
-      .lean();
+    const search = normalizeSearchText(req.query.search);
+    const paginationParams = getPaginationParams(req.query);
+    const filter = {};
+
+    if (search) {
+      const searchRegex = buildSearchRegex(search);
+      filter.$or = [
+        { slug: searchRegex },
+        { "title.uz": searchRegex },
+        { "title.ru": searchRegex },
+        { "title.en": searchRegex },
+        { "name.uz": searchRegex },
+        { "name.ru": searchRegex },
+        { "name.en": searchRegex },
+        { "subgenres.slug": searchRegex },
+        { "subgenres.title.uz": searchRegex },
+        { "subgenres.title.ru": searchRegex },
+        { "subgenres.title.en": searchRegex },
+        { "subgenres.name.uz": searchRegex },
+        { "subgenres.name.ru": searchRegex },
+        { "subgenres.name.en": searchRegex },
+      ];
+    }
+
+    const [categories, total] = await Promise.all([
+      Category.find(filter)
+        .sort({ order: 1, createdAt: -1 })
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit)
+        .lean(),
+      Category.countDocuments(filter),
+    ]);
 
     const categoriesWithCount = await Promise.all(
       categories
@@ -392,7 +426,10 @@ const getAllCategoriesAdmin = async (req, res, next) => {
         }),
     );
 
-    apiResponse(res, 200, true, "Kategoriyalar ro'yxati", categoriesWithCount);
+    apiResponse(res, 200, true, "Kategoriyalar ro'yxati", {
+      categories: categoriesWithCount,
+      pagination: buildPagination({ ...paginationParams, total }),
+    });
   } catch (error) {
     console.error("Kategoriyalarni yuklashda xatolik:", error);
     next(error);
@@ -451,6 +488,24 @@ const toggleCategoryFeatured = async (req, res, next) => {
   }
 };
 
+const getCategoryById = async (req, res, next) => {
+  try {
+    const category = await Category.findById(req.params.id).lean();
+
+    if (!category) {
+      return apiResponse(res, 404, false, "Kategoriya topilmadi");
+    }
+
+    apiResponse(res, 200, true, "Kategoriya topildi", {
+      ...category,
+      name: getCategoryName(category),
+      subgenres: getCategorySubgenres(category),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createCategory,
   addSubCategory,
@@ -460,4 +515,5 @@ module.exports = {
   getAllCategoriesAdmin,
   toggleCategoryStatus,
   toggleCategoryFeatured,
+  getCategoryById,
 };

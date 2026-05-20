@@ -2,6 +2,8 @@ const Author = require('../../models/Author');
 const Product = require('../../models/Product');
 const slugify = require('../../utils/slugify');
 const apiResponse = require('../../utils/apiResponse');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
+const { buildSearchRegex } = require('../../utils/searchRegex');
 
 const parseMaybeJson = (value) => {
   if (value === undefined || value === null || value === '') {
@@ -53,19 +55,18 @@ const createAuthor = async (req, res, next) => {
 
 const getAllAuthorsAdmin = async (req, res, next) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
+    const { search } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     let filter = {};
 
     if (search) {
-      filter.name = { $regex: search, $options: 'i' };
+      filter.name = buildSearchRegex(search);
     }
 
-    const skip = (page - 1) * limit;
-    
     const authors = await Author.find(filter)
       .sort('name')
-      .skip(skip)
-      .limit(Number(limit));
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit);
 
 
     const authorsWithBookCount = await Promise.all(
@@ -82,9 +83,7 @@ const getAllAuthorsAdmin = async (req, res, next) => {
 
     apiResponse(res, 200, true, "Mualliflar ro'yxati", {
       authors: authorsWithBookCount,
-      total,
-      currentPage: Number(page),
-      totalPages: Math.ceil(total / limit)
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) {
     next(error);

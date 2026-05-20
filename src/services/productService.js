@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const { buildSearchRegex } = require('../utils/searchRegex');
 
 class ProductService {
   async getAllProducts(query) {
@@ -31,7 +32,7 @@ class ProductService {
 
     // Qidiruv (Title bo'yicha)
     if (search) {
-      filter["title.uz"] = { $regex: search, $options: 'i' };
+      filter["title.uz"] = buildSearchRegex(search);
     }
 
     // Sortlash

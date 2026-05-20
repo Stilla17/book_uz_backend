@@ -3,6 +3,7 @@ const Author = require('../../models/Author');
 const Product = require('../../models/Product');
 const cloudinary = require('../../config/cloudinary');
 const apiResponse = require('../../utils/apiResponse');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 
 const parseJsonField = (value, fallback) => {
   if (value === undefined || value === null || value === '') {
@@ -23,18 +24,17 @@ const parseJsonField = (value, fallback) => {
 
 const getAllBanners = async (req, res, next) => {
   try {
-    const { type, page = 1, limit = 20, isActive } = req.query;
+    const { type, isActive } = req.query;
+    const paginationParams = getPaginationParams(req.query, { limit: 20 });
     let filter = {};
     
     if (type) filter.type = type;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     
-    const skip = (page - 1) * limit;
-    
     const banners = await Banner.find(filter)
       .sort({ type: 1, order: 1, createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit)
       .populate('selectedBooks', 'title price images')
       .populate('author.authorId', 'name image')
       .populate('quote.authorId', 'name image');
@@ -43,9 +43,7 @@ const getAllBanners = async (req, res, next) => {
     
     apiResponse(res, 200, true, "Bannerlar ro'yxati", {
       banners,
-      total,
-      currentPage: Number(page),
-      totalPages: Math.ceil(total / limit)
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) {
     next(error);

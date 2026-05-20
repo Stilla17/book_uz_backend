@@ -1,11 +1,13 @@
 // backend/src/controllers/admin/adminSubscriptionController.js
 const Subscription = require('../../models/Subscription');
 const apiResponse = require('../../utils/apiResponse');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 
 
 exports.getAllSubscriptions = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, isActive } = req.query;
+    const { isActive } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     
     let query = {};
     if (isActive !== undefined) {
@@ -14,18 +16,14 @@ exports.getAllSubscriptions = async (req, res, next) => {
 
     const subscriptions = await Subscription.find(query)
       .sort({ order: 1, createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit);
 
     const total = await Subscription.countDocuments(query);
 
     apiResponse(res, 200, true, "Obuna planlari", {
       subscriptions,
-      pagination: {
-        total,
-        page: parseInt(page),
-        pages: Math.ceil(total / limit)
-      }
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) {
     next(error);

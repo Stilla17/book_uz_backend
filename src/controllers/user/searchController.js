@@ -3,6 +3,7 @@ const Category = require('../../models/Category');
 const Author = require('../../models/Author');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { buildSearchRegex, normalizeSearchText } = require('../../utils/searchRegex');
 
 /**
  * Global Search Suggestions
@@ -10,7 +11,7 @@ const hydrateProductRelations = require('../../utils/hydrateProductRelations');
  */
 exports.getSuggestions = async (req, res, next) => {
   try {
-    const { q } = req.query; 
+    const q = normalizeSearchText(req.query.q); 
 
     if (!q || q.length < 2) {
       return apiResponse(res, 200, true, "Kamida 2 ta harf yozing", {
@@ -20,7 +21,7 @@ exports.getSuggestions = async (req, res, next) => {
       });
     }
 
-    const searchRegex = new RegExp(q, 'i');
+    const searchRegex = buildSearchRegex(q);
 
     const [products, categories, authors] = await Promise.all([
       Product.find({

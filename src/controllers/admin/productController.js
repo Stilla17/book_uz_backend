@@ -5,8 +5,9 @@ const Publisher = require("../../models/Publisher");
 const slugify = require("../../utils/slugify");
 const apiResponse = require("../../utils/apiResponse");
 const cloudinary = require("../../config/cloudinary");
+const { getPaginationParams, buildPagination } = require("../../utils/pagination");
+const { buildSearchRegex, normalizeSearchText } = require("../../utils/searchRegex");
 
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
   if (value === undefined || value === null) return "";
@@ -188,8 +189,6 @@ const getAllProducts = async (req, res, next) => {
   try {
     const {
       search,
-      page = 1,
-      limit = 10,
       category,
       author,
       publisher,
@@ -199,15 +198,13 @@ const getAllProducts = async (req, res, next) => {
       subgenreId,
       subgenre,
     } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     let filter = {};
     const searchKeyword = toTrimmedString(search);
     const barcodeValue = toTrimmedString(barcode);
 
     if (searchKeyword) {
-      const searchRegex = {
-        $regex: escapeRegex(searchKeyword),
-        $options: "i",
-      };
+      const searchRegex = buildSearchRegex(searchKeyword);
       filter.$or = [
         { barcode: searchRegex },
         { "title.uz": searchRegex },
@@ -237,15 +234,13 @@ const getAllProducts = async (req, res, next) => {
       filter.subCategoryId = selectedSubgenre;
     }
 
-    const skip = (page - 1) * limit;
-
     const products = await Product.find(filter)
       .populate("category", "title name subgenres")
       .populate("author", "name")
       .populate("publisher", "name slug image")
       .sort("-createdAt")
-      .skip(skip)
-      .limit(Number(limit));
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit);
 
     const total = await Product.countDocuments(filter);
 
@@ -259,9 +254,7 @@ const getAllProducts = async (req, res, next) => {
 
     apiResponse(res, 200, true, "Mahsulotlar ro'yxati", {
       products: productsWithDetails,
-      total,
-      currentPage: Number(page),
-      totalPages: Math.ceil(total / limit),
+      pagination: buildPagination({ ...paginationParams, total }),
     });
   } catch (error) {
     next(error);
@@ -574,7 +567,7 @@ const searchProducts = async (req, res) => {
   try {
     const { q } = req.query; // qidiruv so'zi: barcode yoki nom
 
-    const keyword = toTrimmedString(q);
+    const keyword = normalizeSearchText(q);
 
     if (!keyword) {
       return res
@@ -582,7 +575,7 @@ const searchProducts = async (req, res) => {
         .json({ success: false, message: "Qidiruv parametri bo'sh" });
     }
 
-    const searchRegex = { $regex: escapeRegex(keyword), $options: "i" };
+    const searchRegex = buildSearchRegex(keyword);
 
     // Bir vaqtning o'zida ham barcode, ham title bo'yicha qidiramiz
     const products = await Product.find({

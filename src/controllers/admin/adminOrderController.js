@@ -1,6 +1,7 @@
 const Order = require('../../models/Order');
 const apiResponse = require('../../utils/apiResponse');
 const socketEvents = require('../../sockets/events');
+const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 
 /**
  * 1. Barcha buyurtmalarni olish (Filtr va Pagination bilan)
@@ -8,25 +9,24 @@ const socketEvents = require('../../sockets/events');
 
 exports.getAllOrders = async (req, res, next) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status } = req.query;
+    const paginationParams = getPaginationParams(req.query);
     let filter = {};
     if (status) filter.status = status;
-
-    const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([
       Order.find(filter)
         .populate('user', 'name email phone')
         .populate('items.product', 'title price')
         .sort('-createdAt')
-        .skip(skip)
-        .limit(Number(limit)),
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit),
       Order.countDocuments(filter)
     ]);
 
     apiResponse(res, 200, true, "Barcha buyurtmalar", {
       orders,
-      pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }
+      pagination: buildPagination({ ...paginationParams, total })
     });
   } catch (error) { next(error); }
 };

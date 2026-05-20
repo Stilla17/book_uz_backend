@@ -3,6 +3,7 @@ const Category = require('../../models/Category');
 const Publisher = require('../../models/Publisher');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { buildSearchPattern, buildSearchRegex } = require('../../utils/searchRegex');
 
 const CATEGORY_SELECT = 'name title subgenres';
 const UNKNOWN_AUTHOR = {
@@ -45,8 +46,6 @@ const getWishlistSet = (req) =>
 
 const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ''));
 
-const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const getLocalizedValues = (field) => {
   if (!field) return [];
   if (typeof field === 'string') return [field];
@@ -58,7 +57,7 @@ const buildNameFilters = (values) => {
   const uniqueValues = [...new Set(values.filter(Boolean))];
 
   return uniqueValues.map((value) => ({
-    'category.name': { $regex: `^${escapeRegex(value)}$`, $options: 'i' },
+    'category.name': buildSearchRegex(value, { exact: true }),
   }));
 };
 
@@ -73,9 +72,9 @@ const findCategoryByParam = async (value) => {
   return Category.findOne({
     $or: [
       { slug: value },
-      { 'title.uz': value },
-      { 'title.ru': value },
-      { 'title.en': value },
+      { 'title.uz': buildSearchRegex(value, { exact: true }) },
+      { 'title.ru': buildSearchRegex(value, { exact: true }) },
+      { 'title.en': buildSearchRegex(value, { exact: true }) },
     ],
   }).lean();
 };
@@ -85,9 +84,9 @@ const findSubgenreByParam = async (value) => {
 
   const subgenreFilters = [
     { 'subgenres.slug': value },
-    { 'subgenres.title.uz': value },
-    { 'subgenres.title.ru': value },
-    { 'subgenres.title.en': value },
+    { 'subgenres.title.uz': buildSearchRegex(value, { exact: true }) },
+    { 'subgenres.title.ru': buildSearchRegex(value, { exact: true }) },
+    { 'subgenres.title.en': buildSearchRegex(value, { exact: true }) },
   ];
 
   if (isObjectId(value)) {
@@ -98,13 +97,15 @@ const findSubgenreByParam = async (value) => {
     $or: subgenreFilters,
   }).lean();
 
+  const titleRegex = new RegExp(buildSearchPattern(value, { exact: true }), 'i');
+
   for (const category of categories) {
     const subgenre = category.subgenres?.find((item) =>
       item.slug === value ||
       item._id?.toString() === value ||
-      item.title?.uz === value ||
-      item.title?.ru === value ||
-      item.title?.en === value
+      titleRegex.test(item.title?.uz || '') ||
+      titleRegex.test(item.title?.ru || '') ||
+      titleRegex.test(item.title?.en || '')
     );
 
     if (subgenre) return { category, subgenre };
@@ -136,14 +137,14 @@ exports.getAllProducts = async (req, res, next) => {
     if (keyword) {
       andFilters.push({
         $or: [
-        { "title.uz": { $regex: keyword, $options: 'i' } },
-        { "title.ru": { $regex: keyword, $options: 'i' } },
-        { "title.en": { $regex: keyword, $options: 'i' } },
-        { "description.uz": { $regex: keyword, $options: 'i' } },
-        { "description.ru": { $regex: keyword, $options: 'i' } },
-        { "description.en": { $regex: keyword, $options: 'i' } },
-        { "publisher.name": { $regex: keyword, $options: 'i' } },
-        { "author.name": { $regex: keyword, $options: 'i' } },
+        { "title.uz": buildSearchRegex(keyword) },
+        { "title.ru": buildSearchRegex(keyword) },
+        { "title.en": buildSearchRegex(keyword) },
+        { "description.uz": buildSearchRegex(keyword) },
+        { "description.ru": buildSearchRegex(keyword) },
+        { "description.en": buildSearchRegex(keyword) },
+        { "publisher.name": buildSearchRegex(keyword) },
+        { "author.name": buildSearchRegex(keyword) },
         ],
       });
     }
@@ -153,7 +154,7 @@ exports.getAllProducts = async (req, res, next) => {
       const categoryFilters = [
         { "category.id": category },
         { "category._id": category },
-        { "category.name": { $regex: category, $options: 'i' } },
+        { "category.name": buildSearchRegex(category) },
       ];
 
       if (isObjectId(category)) {
@@ -202,7 +203,7 @@ exports.getAllProducts = async (req, res, next) => {
       } else if (/^[0-9a-fA-F]{24}$/.test(selectedPublisher)) {
         query.publisher = selectedPublisher;
       } else {
-        andFilters.push({ "publisher.name": { $regex: selectedPublisher, $options: 'i' } });
+        andFilters.push({ "publisher.name": buildSearchRegex(selectedPublisher) });
       }
     }
     if (language) query.language = language;
@@ -217,7 +218,7 @@ exports.getAllProducts = async (req, res, next) => {
         const subgenreFilters = [
           { "category.id": selectedSubgenre },
           { "category._id": selectedSubgenre },
-          { "category.name": { $regex: selectedSubgenre, $options: 'i' } },
+          { "category.name": buildSearchRegex(selectedSubgenre) },
         ];
 
         if (resolvedSubgenre) {
