@@ -34,6 +34,8 @@ const storage = new CloudinaryStorage({
         folderName = 'bookstore/categories';
       } else if (req.baseUrl?.includes('banner') || req.path?.includes('banner')) {
         folderName = 'bookstore/banners';
+      } else if (req.baseUrl?.includes('news') || req.path?.includes('news')) {
+        folderName = 'bookstore/news';
       }
     }
     return {
