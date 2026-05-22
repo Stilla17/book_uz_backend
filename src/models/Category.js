@@ -48,7 +48,6 @@ CategorySchema.virtual("name").get(function getName() {
   return this.title;
 });
 
-CategorySchema.index({ slug: 1 });
 CategorySchema.index({ order: 1 });
 CategorySchema.index({ "title.uz": 1, "title.ru": 1, "title.en": 1 });
 CategorySchema.index({ "subgenres.slug": 1 });

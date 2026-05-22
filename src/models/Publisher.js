@@ -12,7 +12,6 @@ const PublishersSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-PublishersSchema.index({ slug: 1 });
 PublishersSchema.index({ name: 1 });
 
 module.exports = mongoose.model("Publishers", PublishersSchema);

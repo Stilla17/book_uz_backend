@@ -14,7 +14,6 @@ const AuthorSchema = new mongoose.Schema({
   books: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], default: [] }
 }, { timestamps: true });
 
-AuthorSchema.index({ slug: 1 });
 AuthorSchema.index({ name: 1 });
 
 module.exports = mongoose.model('Author', AuthorSchema);

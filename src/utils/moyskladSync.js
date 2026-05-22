@@ -241,7 +241,7 @@ const syncMoyskladProducts = async () => {
 };
 // Cron Job: Har soatda bir marta ishga tushadi (00:00, 01:00 va h.k.)
 const startSyncCron = () => {
-  cron.schedule("0 0 * * *", () => {
+  cron.schedule("0 */5 * * *", () => {
     syncMoyskladProducts();
   });
 };

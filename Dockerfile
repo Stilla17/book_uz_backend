@@ -5,7 +5,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --legacy-peer-deps
 
-COPY server.js ./
 COPY src ./src
 
 ENV NODE_ENV=production
