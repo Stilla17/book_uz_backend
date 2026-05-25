@@ -1,9 +1,11 @@
 const Order = require('../../models/Order');
+const Cart = require('../../models/Cart');
+const Product = require('../../models/Product');
 const orderService = require('../../services/orderService');
 const socketEvents = require('../../sockets/events');
 const apiResponse = require('../../utils/apiResponse');
 const { buildClickUrl } = require('../../payment/click/clickService');
-const { buildPaymeUrl } = require('../../payment/payme/paymeService');
+const { buildPaymeCheckoutUrl } = require('../../payment/payme/paymeService');
 
 
 /**
@@ -25,7 +27,7 @@ const placeOrder = async (req, res, next) => {
     }
 
     if (order.paymentType === 'PAYME') {
-      const paymeUrl = buildPaymeUrl(order._id.toString(), order.totalAmount);
+      const paymeUrl = buildPaymeCheckoutUrl(order._id.toString());
       responseData.paymeUrl = paymeUrl;
       responseData.payment = {
         type: 'PAYME_REDIRECT',
