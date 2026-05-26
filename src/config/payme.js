@@ -1,6 +1,7 @@
 module.exports = {
   KASSA_ID: process.env.PAYME_KASSA_ID,
   PASSWORD: process.env.PAYME_PASSWORD,
+  ACCOUNT_KEY: process.env.PAYME_ACCOUNT_KEY || "order_id",
   CHECKOUT_URL: process.env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz",
   RETURN_URL:
     process.env.PAYME_RETURN_URL ||

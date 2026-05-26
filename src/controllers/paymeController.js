@@ -1,7 +1,8 @@
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
-const { STATE, ERROR } = require("../config/payme");
+const { STATE, ERROR, ACCOUNT_KEY } = require("../config/payme");
 const PaymeTransaction = require("../models/PaymeTransaction");
+const { buildPaymeCheckoutForm } = require("../payment/payme/paymeService");
 
 const METHOD_NOT_FOUND = {
   code: -32601,
@@ -13,35 +14,36 @@ const TRANSACTION_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 const err = (res, id, error) => {
   const paymeError = error && typeof error === "object" ? error : ERROR.INTERNAL_ERROR;
   const message =
-    typeof paymeError.message === "string"
-      ? paymeError.message
-      : paymeError.message?.ru ||
-        paymeError.message?.uz ||
-        paymeError.message?.en ||
-        "Payme error";
+    paymeError.message && typeof paymeError.message === "object"
+      ? paymeError.message.ru ||
+        paymeError.message.uz ||
+        paymeError.message.en ||
+        "Payme error"
+      : String(paymeError.message || "Payme error");
 
   return res.json({
-    jsonrpc: "2.0",
     id,
     error: {
       code: paymeError.code,
       message,
       data: paymeError.data || null,
     },
-    result: null,
   });
 };
 const ok = (res, id, result) => {
   return res.json({
-    jsonrpc: "2.0",
     id,
-    error: null,
     result,
   });
 };
 
 function getOrderId(account = {}) {
-  const orderId = account.order_id || account.orderId || account.order;
+  const orderId =
+    account[ACCOUNT_KEY] ||
+    account.order_id ||
+    account.orderId ||
+    account.userId ||
+    account.order;
   return typeof orderId === "string" ? orderId : null;
 }
 
@@ -324,7 +326,7 @@ async function getStatement(req, res) {
     time: transaction.createTime,
     amount: transaction.amount,
     account: {
-      order_id: transaction.orderId.toString(),
+      [ACCOUNT_KEY]: transaction.orderId.toString(),
     },
     create_time: transaction.createTime,
     perform_time: transaction.performTime || 0,
@@ -340,6 +342,11 @@ async function getStatement(req, res) {
 async function paymeWebhook(req, res) {
   try {
     const { id, method } = req.body;
+    console.log("[payme] webhook", {
+      id,
+      method,
+      params: req.body?.params || null,
+    });
 
     switch (method) {
       case "CheckPerformTransaction":
@@ -355,11 +362,36 @@ async function paymeWebhook(req, res) {
       case "GetStatement":
         return getStatement(req, res);
       default:
+        console.warn("[payme] method not found", { method });
         return err(res, id, METHOD_NOT_FOUND);
     }
   } catch (error) {
+    console.error("[payme] webhook error", error);
     return err(res, req.body?.id, ERROR.INTERNAL_ERROR);
   }
+}
+
+async function paymeCheckout(req, res) {
+  const orderId = req.params.orderId;
+
+  if (!isValidObjectId(orderId)) {
+    return res.status(404).send("Order not found");
+  }
+
+  const order = await Order.findById(orderId);
+
+  if (!order || !isPayableOrder(order)) {
+    console.warn("[payme] checkout blocked", {
+      orderId,
+      exists: Boolean(order),
+      paymentType: order?.paymentType,
+      paymentStatus: order?.paymentStatus,
+      status: order?.status,
+    });
+    return res.status(400).send("Payment is not allowed for this order");
+  }
+
+  res.type("html").send(buildPaymeCheckoutForm(order));
 }
 
 module.exports = {
@@ -370,4 +402,5 @@ module.exports = {
   checkTransaction,
   getStatement,
   paymeWebhook,
+  paymeCheckout,
 };
