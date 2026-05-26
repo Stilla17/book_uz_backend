@@ -1,42 +1,50 @@
-const { KASSA_ID, PASSWORD } = require("../config/payme");
+const paymeConfig = require("../config/payme");
 
-const unauthorized = (req, res, message) =>
+const unauthorized = (req, res, data = "authorization") =>
   res.json({
     id: req.body?.id || null,
     error: {
       code: -32504,
-      message: typeof message === "string" ? message : "Unauthorized",
-      data: null,
+      message: "Access denied.",
+      data,
     },
   });
 
 const paymeAuth = (req, res, next) => {
-  const auth = req.headers["authorization"];
+  try {
+    const auth = req.headers["authorization"];
 
-  if (!KASSA_ID || !PASSWORD) {
-    return unauthorized(req, res, "Payme credentials are not configured");
+    if (!paymeConfig.KASSA_ID || !paymeConfig.PASSWORD) {
+      return unauthorized(req, res, "payme_credentials");
+    }
+
+    if (!auth || !auth.toLowerCase().startsWith("basic ")) {
+      return unauthorized(req, res, "Invalid auth credentials");
+    }
+
+    const base64 = auth.slice(6).trim();
+    const decoded = Buffer.from(base64, "base64").toString("utf-8");
+    const separatorIndex = decoded.indexOf(":");
+    const login = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : "";
+    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
+    const allowedLogins = [
+      ...new Set([paymeConfig.LOGIN, "Paycom", paymeConfig.KASSA_ID].filter(Boolean)),
+    ];
+
+    if (!allowedLogins.includes(login) || password !== paymeConfig.PASSWORD) {
+      console.warn("[payme] invalid credentials", {
+        login: login || null,
+        hasPassword: Boolean(password),
+        allowedLogins,
+      });
+      return unauthorized(req, res, "Invalid auth credentials");
+    }
+
+    next();
+  } catch (error) {
+    console.error("[payme] auth error", error);
+    return unauthorized(req, res, "Invalid auth credentials");
   }
-
-  if (!auth || !auth.startsWith("Basic ")) {
-    return unauthorized(req, res, "Unauthorized");
-  }
-
-  const base64 = auth.replace("Basic ", "");
-  const decoded = Buffer.from(base64, "base64").toString("utf-8");
-  // Payme sends Paycom:PASSWORD. Some test tools may use KASSA_ID:PASSWORD.
-  const separatorIndex = decoded.indexOf(":");
-  const kid = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : "";
-  const pwd = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-  if (!["Paycom", KASSA_ID, process.env.PAYME_LOGIN].filter(Boolean).includes(kid) || pwd !== PASSWORD) {
-    console.warn("[payme] invalid credentials", {
-      login: kid || null,
-      hasPassword: Boolean(pwd),
-    });
-    return unauthorized(req, res, "Invalid credentials");
-  }
-
-  next();
 };
 
 module.exports = paymeAuth;

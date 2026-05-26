@@ -1,7 +1,10 @@
+const accountKey = process.env.PAYME_ACCOUNT_KEY || "order_id";
+
 module.exports = {
   KASSA_ID: process.env.PAYME_KASSA_ID,
+  LOGIN: process.env.PAYME_LOGIN || "Paycom",
   PASSWORD: process.env.PAYME_PASSWORD,
-  ACCOUNT_KEY: process.env.PAYME_ACCOUNT_KEY || "order_id",
+  ACCOUNT_KEY: accountKey,
   CHECKOUT_URL: process.env.PAYME_CHECKOUT_URL || "https://checkout.paycom.uz",
   RETURN_URL:
     process.env.PAYME_RETURN_URL ||
@@ -17,18 +20,23 @@ module.exports = {
   ERROR: {
     INVALID_AMOUNT: {
       code: -31001,
-      message: "Invalid payment amount",
+      message: "Invalid amount",
       data: "amount",
     },
     INVALID_ACCOUNT: {
       code: -31050,
-      message: "Order not found",
-      data: "order_id",
+      message: "Account not found",
+      data: accountKey,
     },
     ORDER_NOT_ALLOWED: {
       code: -31008,
-      message: "Payment is not allowed for this order",
-      data: "order_id",
+      message: "Operation cannot be performed",
+      data: accountKey,
+    },
+    ORDER_WAITING_PAYMENT: {
+      code: -31099,
+      message: "Order is already waiting for payment",
+      data: "transaction",
     },
     TRANSACTION_NOT_FOUND: {
       code: -31003,
@@ -37,7 +45,7 @@ module.exports = {
     },
     TRANSACTION_NOT_ALLOWED: {
       code: -31008,
-      message: "Transaction is not allowed",
+      message: "Operation cannot be performed",
       data: "transaction",
     },
     CANT_CANCEL_TRANSACTION: {

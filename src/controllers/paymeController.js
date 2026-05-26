@@ -1,18 +1,21 @@
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
-const { STATE, ERROR, ACCOUNT_KEY } = require("../config/payme");
+const paymeConfig = require("../config/payme");
+const { STATE, ERROR, ACCOUNT_KEY } = paymeConfig;
 const PaymeTransaction = require("../models/PaymeTransaction");
 const { buildPaymeCheckoutForm } = require("../payment/payme/paymeService");
 
 const METHOD_NOT_FOUND = {
   code: -32601,
   message: "Method not found",
-  data: null,
+  data: "method",
 };
+
 const TRANSACTION_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 
 const err = (res, id, error) => {
-  const paymeError = error && typeof error === "object" ? error : ERROR.INTERNAL_ERROR;
+  const paymeError =
+    error && typeof error === "object" ? error : ERROR.INTERNAL_ERROR;
   const message =
     paymeError.message && typeof paymeError.message === "object"
       ? paymeError.message.ru ||
@@ -30,6 +33,7 @@ const err = (res, id, error) => {
     },
   });
 };
+
 const ok = (res, id, result) => {
   return res.json({
     id,
@@ -44,11 +48,46 @@ function getOrderId(account = {}) {
     account.orderId ||
     account.userId ||
     account.order;
-  return typeof orderId === "string" ? orderId : null;
+
+  if (typeof orderId === "string") return orderId;
+  if (orderId && typeof orderId.toString === "function") {
+    const value = orderId.toString();
+    return value === "[object Object]" ? null : value;
+  }
+
+  return null;
 }
 
 function amountInTiyin(amount) {
   return Math.round(Number(amount) * 100);
+}
+
+function isSameAmount(orderAmount, paymeAmount) {
+  const normalizedPaymeAmount = Number(paymeAmount);
+  const normalizedOrderAmount = Number(orderAmount);
+
+  if (
+    !Number.isFinite(normalizedPaymeAmount) ||
+    !Number.isFinite(normalizedOrderAmount)
+  ) {
+    return false;
+  }
+
+  return (
+    Math.round(normalizedOrderAmount) === Math.round(normalizedPaymeAmount) ||
+    amountInTiyin(normalizedOrderAmount) === Math.round(normalizedPaymeAmount)
+  );
+}
+
+function merchantTransactionId(transaction) {
+  return transaction._id.toString();
+}
+
+function normalizeCreateTime(time) {
+  const normalizedTime = Number(time);
+  return Number.isFinite(normalizedTime) && normalizedTime > 0
+    ? normalizedTime
+    : Date.now();
 }
 
 function isValidObjectId(id) {
@@ -67,17 +106,13 @@ function isPayableOrder(order) {
   );
 }
 
-async function cancelTimedOutTransaction(transaction, order) {
+async function cancelTimedOutTransaction(transaction) {
+  // NOTE: order statusi bu yerda o'zgartirilmaydi —
+  // createTransaction ichida alohida boshqariladi
   transaction.state = STATE.CANCELLED;
   transaction.cancelTime = Date.now();
   transaction.reason = 4;
   await transaction.save();
-
-  if (order && order.status === "PENDING") {
-    order.status = "CANCELLED";
-    order.paymentStatus = "FAILED";
-    await order.save();
-  }
 }
 
 async function checkPerformTransaction(req, res) {
@@ -85,11 +120,7 @@ async function checkPerformTransaction(req, res) {
   const { amount, account } = params;
   const orderId = getOrderId(account);
 
-  if (!orderId) {
-    return err(res, id, ERROR.INVALID_ACCOUNT);
-  }
-
-  if (!isValidObjectId(orderId)) {
+  if (!orderId || !isValidObjectId(orderId)) {
     return err(res, id, ERROR.INVALID_ACCOUNT);
   }
 
@@ -103,7 +134,7 @@ async function checkPerformTransaction(req, res) {
     return err(res, id, ERROR.ORDER_NOT_ALLOWED);
   }
 
-  if (amountInTiyin(order.totalAmount) !== Number(amount)) {
+  if (!isSameAmount(order.totalAmount, amount)) {
     return err(res, id, ERROR.INVALID_AMOUNT);
   }
 
@@ -115,15 +146,11 @@ async function createTransaction(req, res) {
   const { id: paymeId, time, amount, account } = params;
   const orderId = getOrderId(account);
 
-  if (!orderId) {
-    return err(res, id, ERROR.INVALID_ACCOUNT);
-  }
-
   if (!paymeId) {
     return err(res, id, ERROR.TRANSACTION_NOT_ALLOWED);
   }
 
-  if (!isValidObjectId(orderId)) {
+  if (!orderId || !isValidObjectId(orderId)) {
     return err(res, id, ERROR.INVALID_ACCOUNT);
   }
 
@@ -133,10 +160,7 @@ async function createTransaction(req, res) {
     return err(res, id, ERROR.INVALID_ACCOUNT);
   }
 
-  if (amountInTiyin(order.totalAmount) !== Number(amount)) {
-    return err(res, id, ERROR.INVALID_AMOUNT);
-  }
-
+  // Agar bu paymeId bilan transaction allaqachon mavjud bo'lsa
   const transaction = await PaymeTransaction.findOne({ paymeId });
 
   if (transaction) {
@@ -151,7 +175,7 @@ async function createTransaction(req, res) {
       transaction.state === STATE.PENDING &&
       isTimedOut(transaction.createTime)
     ) {
-      await cancelTimedOutTransaction(transaction, order);
+      await cancelTimedOutTransaction(transaction);
       return err(res, id, ERROR.TRANSACTION_NOT_ALLOWED);
     }
 
@@ -159,18 +183,43 @@ async function createTransaction(req, res) {
       return err(res, id, ERROR.TRANSACTION_NOT_ALLOWED);
     }
 
+    // Mavjud PENDING transaction — idempotent javob qaytaramiz
     return ok(res, id, {
       create_time: transaction.createTime,
-      transaction: transaction.paymeId,
+      transaction: merchantTransactionId(transaction),
       state: transaction.state,
     });
   }
 
+  // Order to'lanishi mumkinligini tekshiramiz
   if (!isPayableOrder(order)) {
     return err(res, id, ERROR.ORDER_NOT_ALLOWED);
   }
 
-  const create_time = Number(time) || Date.now();
+  if (!isSameAmount(order.totalAmount, amount)) {
+    return err(res, id, ERROR.INVALID_AMOUNT);
+  }
+
+  // Ushbu order uchun boshqa PENDING transaction bormi?
+  const pendingTransaction = await PaymeTransaction.findOne({
+    orderId: order._id,
+    state: STATE.PENDING,
+  });
+
+  if (pendingTransaction) {
+    if (!isTimedOut(pendingTransaction.createTime)) {
+      // Hali muddati o'tmagan — yangi transaction yaratishga ruxsat yo'q
+      return err(res, id, ERROR.ORDER_WAITING_PAYMENT);
+    }
+
+    // Muddati o'tgan — faqat transactionni bekor qilamiz,
+    // orderni PENDING holida qoldiramiz (yangi to'lov uchun)
+    await cancelTimedOutTransaction(pendingTransaction);
+    // pendingTransaction bekor qilindi, davom etamiz
+  }
+
+  // Yangi transaction yaratamiz
+  const create_time = normalizeCreateTime(time);
   const newTransaction = await PaymeTransaction.create({
     paymeId,
     orderId: order._id,
@@ -181,7 +230,7 @@ async function createTransaction(req, res) {
 
   return ok(res, id, {
     create_time,
-    transaction: newTransaction.paymeId,
+    transaction: merchantTransactionId(newTransaction),
     state: newTransaction.state,
   });
 }
@@ -197,7 +246,7 @@ async function performTransaction(req, res) {
   if (transaction.state === STATE.COMPLETED) {
     return ok(res, id, {
       perform_time: transaction.performTime,
-      transaction: transaction.paymeId,
+      transaction: merchantTransactionId(transaction),
       state: transaction.state,
     });
   }
@@ -217,7 +266,15 @@ async function performTransaction(req, res) {
   }
 
   if (isTimedOut(transaction.createTime)) {
-    await cancelTimedOutTransaction(transaction, order);
+    transaction.state = STATE.CANCELLED;
+    transaction.cancelTime = Date.now();
+    transaction.reason = 4;
+    await transaction.save();
+
+    order.status = "CANCELLED";
+    order.paymentStatus = "FAILED";
+    await order.save();
+
     return err(res, id, ERROR.TRANSACTION_NOT_ALLOWED);
   }
 
@@ -233,7 +290,7 @@ async function performTransaction(req, res) {
 
   return ok(res, id, {
     perform_time,
-    transaction: transaction.paymeId,
+    transaction: merchantTransactionId(transaction),
     state: transaction.state,
   });
 }
@@ -263,7 +320,7 @@ async function cancelTransaction(req, res) {
 
     return ok(res, id, {
       cancel_time: transaction.cancelTime,
-      transaction: transaction.paymeId,
+      transaction: merchantTransactionId(transaction),
       state: STATE.CANCELLED,
     });
   }
@@ -283,14 +340,14 @@ async function cancelTransaction(req, res) {
 
     return ok(res, id, {
       cancel_time: transaction.cancelTime,
-      transaction: transaction.paymeId,
+      transaction: merchantTransactionId(transaction),
       state: STATE.CANCELLED_AFTER_COMPLETE,
     });
   }
 
   return ok(res, id, {
     cancel_time: transaction.cancelTime,
-    transaction: transaction.paymeId,
+    transaction: merchantTransactionId(transaction),
     state: transaction.state,
   });
 }
@@ -307,19 +364,24 @@ async function checkTransaction(req, res) {
     create_time: transaction.createTime,
     perform_time: transaction.performTime || 0,
     cancel_time: transaction.cancelTime || 0,
-    transaction: transaction.paymeId,
+    transaction: merchantTransactionId(transaction),
     state: transaction.state,
-    reason: transaction.reason || null,
+    reason: transaction.reason ?? null,
   });
 }
 
 async function getStatement(req, res) {
   const { id, params = {} } = req.body;
-  const { from, to } = params;
+  const fromTime = Number.isFinite(Number(params.from))
+    ? Number(params.from)
+    : 0;
+  const toTime = Number.isFinite(Number(params.to))
+    ? Number(params.to)
+    : Date.now();
 
   const transactionsList = await PaymeTransaction.find({
-    createTime: { $gte: from, $lte: to },
-  });
+    createTime: { $gte: fromTime, $lte: toTime },
+  }).sort({ createTime: 1 });
 
   const transactions = transactionsList.map((transaction) => ({
     id: transaction.paymeId,
@@ -331,12 +393,26 @@ async function getStatement(req, res) {
     create_time: transaction.createTime,
     perform_time: transaction.performTime || 0,
     cancel_time: transaction.cancelTime || 0,
-    transaction: transaction.paymeId,
+    transaction: merchantTransactionId(transaction),
     state: transaction.state,
-    reason: transaction.reason || null,
+    reason: transaction.reason ?? null,
   }));
 
   return ok(res, id, { transactions });
+}
+
+async function changePassword(req, res) {
+  const { id, params = {} } = req.body;
+  const password = params.password || params.new_password || params.newPassword;
+
+  if (typeof password !== "string" || !password.trim()) {
+    return err(res, id, ERROR.ORDER_NOT_ALLOWED);
+  }
+
+  paymeConfig.PASSWORD = password.trim();
+  process.env.PAYME_PASSWORD = password.trim();
+
+  return ok(res, id, { success: true });
 }
 
 async function paymeWebhook(req, res) {
@@ -361,6 +437,8 @@ async function paymeWebhook(req, res) {
         return checkTransaction(req, res);
       case "GetStatement":
         return getStatement(req, res);
+      case "ChangePassword":
+        return changePassword(req, res);
       default:
         console.warn("[payme] method not found", { method });
         return err(res, id, METHOD_NOT_FOUND);
@@ -401,6 +479,7 @@ module.exports = {
   cancelTransaction,
   checkTransaction,
   getStatement,
+  changePassword,
   paymeWebhook,
   paymeCheckout,
 };
