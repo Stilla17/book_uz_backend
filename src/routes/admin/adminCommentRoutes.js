@@ -5,7 +5,7 @@ const {
   getAllComments,
   updateCommentStatus,
   deleteComment
-} = require('../../controllers/admin/adminCommentController');
+} = require('../../controllers/admin/commentController');
 
 const { protect, restrictTo } = require('../../middlewares/auth');
 

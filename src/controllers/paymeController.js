@@ -12,6 +12,10 @@ const METHOD_NOT_FOUND = {
 };
 
 const TRANSACTION_TIMEOUT_MS = 12 * 60 * 60 * 1000;
+const DEFAULT_IKPU_CODE =
+  process.env.PAYME_DEFAULT_IKPU_CODE || "04901001001000000";
+const DEFAULT_PACKAGE_CODE = process.env.PAYME_DEFAULT_PACKAGE_CODE || "000000";
+const DEFAULT_VAT_PERCENT = Number(process.env.PAYME_DEFAULT_VAT_PERCENT || 0);
 
 const err = (res, id, error) => {
   const paymeError =
@@ -60,6 +64,55 @@ function getOrderId(account = {}) {
 
 function amountInTiyin(amount) {
   return Math.round(Number(amount) * 100);
+}
+
+function getLocalizedTitle(title, fallback = "Mahsulot") {
+  if (typeof title === "string" && title.trim()) return title.trim();
+
+  if (title && typeof title === "object") {
+    return title.uz || title.ru || title.en || fallback;
+  }
+
+  return fallback;
+}
+
+function getFiscalCode(product) {
+  const code = String(product?.ikpuCode || DEFAULT_IKPU_CODE).trim();
+
+  if (!/^\d{17}$/.test(code)) {
+    throw new Error("Payme IKPU code 17 ta raqamdan iborat bo'lishi kerak");
+  }
+
+  return code;
+}
+
+function buildPaymeDetail(order) {
+  const items = order.items.map((item) => {
+    const product = item.product || {};
+
+    return {
+      title: getLocalizedTitle(product.title, "Kitob"),
+      price: amountInTiyin(item.priceAtTime),
+      count: item.quantity,
+      code: getFiscalCode(product),
+      vat_percent: DEFAULT_VAT_PERCENT,
+      package_code: String(product.packageCode || DEFAULT_PACKAGE_CODE),
+    };
+  });
+
+  const detail = {
+    receipt_type: 0,
+    items,
+  };
+
+  if (Number(order.deliveryFee) > 0) {
+    detail.shipping = {
+      title: "Yetkazib berish",
+      price: amountInTiyin(order.deliveryFee),
+    };
+  }
+
+  return detail;
 }
 
 function isSameAmount(orderAmount, paymeAmount) {
@@ -124,7 +177,10 @@ async function checkPerformTransaction(req, res) {
     return err(res, id, ERROR.INVALID_ACCOUNT);
   }
 
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate(
+    "items.product",
+    "title ikpuCode packageCode",
+  );
 
   if (!order) {
     return err(res, id, ERROR.INVALID_ACCOUNT);
@@ -138,7 +194,10 @@ async function checkPerformTransaction(req, res) {
     return err(res, id, ERROR.INVALID_AMOUNT);
   }
 
-  return ok(res, id, { allow: true });
+  return ok(res, id, {
+    allow: true,
+    detail: buildPaymeDetail(order),
+  });
 }
 
 async function createTransaction(req, res) {

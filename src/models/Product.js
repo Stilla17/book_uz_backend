@@ -29,6 +29,12 @@ const ProductSchema = new mongoose.Schema(
       },
     ],
     barcode: { type: String, trim: true, unique: true },
+    ikpuCode: {
+      type: String,
+      trim: true,
+      match: [/^\d{17}$/, "IKPU kodi 17 ta raqamdan iborat bo'lishi kerak"],
+    },
+    packageCode: { type: String, trim: true },
     year: { type: Number },
     cover: {
       type: String,

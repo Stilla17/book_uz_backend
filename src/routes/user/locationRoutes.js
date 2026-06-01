@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const locationController = require('../../controllers/user/locationController');
+const locationController = require('../../controllers/user/locationSelectController');
 
 router.get('/regions', locationController.getRegions);
 router.get('/districts', locationController.getDistricts);

@@ -1,7 +1,7 @@
 // backend/src/routes/admin/adminSubscriptionRoutes.js
 const express = require('express');
 const router = express.Router();
-const subscriptionController = require('../../controllers/admin/adminSubscriptionController');
+const subscriptionController = require('../../controllers/admin/subscriptionController');
 const { protect, restrictTo } = require('../../middlewares/auth');
 
 

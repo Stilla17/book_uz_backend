@@ -1,44 +1,18 @@
-const Banner = require('../../models/Banner');
-const apiResponse = require('../../utils/apiResponse');
-
-/**
- * GET /api/v1/banners
- * Faol bannerlarni olish (frontend uchun)
- */
+const Banner = require("../../models/Banner");
+const apiResponse = require("../../utils/apiResponse");
 
 const getActiveBanners = async (req, res, next) => {
   try {
-    const { type } = req.query;
-    let filter = { isActive: true };
-    
-    if (type) {
-      filter.type = type;
-    }
-    
-    const banners = await Banner.find(filter)
-      .sort({ order: 1, createdAt: -1 })
-      .populate({
-        path: 'selectedBooks',
-        select: 'title price images slug author publisher',
-        populate: [
-          { path: 'author' },
-          { path: 'publisher' },
-        ],
-      })
-      .populate('author.authorId')
-      .populate('quote.authorId');
-    
+    const banners = await Banner.find({ isActive: true }).sort({
+      order: 1,
+      createdAt: -1,
+    });
+
     apiResponse(res, 200, true, "Faol bannerlar", banners);
   } catch (error) {
-    console.error('Error fetching banners:', error);
     next(error);
   }
 };
-
-/**
- * POST /api/v1/banners/:id/view
- * Banner ko'rilganligini qayd etish
- */
 
 const trackBannerView = async (req, res, next) => {
   try {
@@ -48,11 +22,6 @@ const trackBannerView = async (req, res, next) => {
     next(error);
   }
 };
-
-/**
- * POST /api/v1/banners/:id/click
- * Banner bosilganligini qayd etish
- */
 
 const trackBannerClick = async (req, res, next) => {
   try {
@@ -66,5 +35,5 @@ const trackBannerClick = async (req, res, next) => {
 module.exports = {
   getActiveBanners,
   trackBannerView,
-  trackBannerClick
+  trackBannerClick,
 };

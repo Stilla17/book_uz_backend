@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const adminOrderController = require('../../controllers/admin/adminOrderController');
+const adminOrderController = require('../../controllers/admin/orderController');
 const { protect, restrictTo } = require('../../middlewares/auth');
 
 router.use(protect, restrictTo('admin'));
