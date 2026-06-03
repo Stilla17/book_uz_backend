@@ -3,6 +3,7 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const Coupon = require("../models/Coupon");
+const { calculateCouponDiscount } = require("../utils/couponDiscount");
 
 class OrderService {
   async createOrder(userId, orderData) {
@@ -95,19 +96,34 @@ class OrderService {
 
       // 4. Kuponni tekshirish (Agar bo'lsa)
       let discount = 0;
+      let appliedCouponCode = "";
       if (couponCode) {
         const coupon = await Coupon.findOne({
           code: couponCode.toUpperCase(),
           isActive: true,
-        });
+        }).session(session);
+        const minOrderAmount = Number(coupon?.minOrderAmount || 0);
+        const usageLimit = Number(coupon?.usageLimit || 0);
+        const usedCount = Number(coupon?.usedCount || 0);
+        const hasUsageLimit = usageLimit > 1;
+
         if (
           coupon &&
           Date.now() < coupon.expiryDate &&
-          subTotal >= coupon.minOrderAmount
+          subTotal >= minOrderAmount &&
+          (!hasUsageLimit || usedCount < usageLimit)
         ) {
-          discount = (subTotal * coupon.discountPercentage) / 100;
-          coupon.usedCount += 1;
-          await coupon.save({ session });
+          const { eligibleSubtotal, discountAmount } = calculateCouponDiscount(
+            coupon,
+            sourceItems,
+          );
+
+          if (eligibleSubtotal > 0) {
+            discount = discountAmount;
+            appliedCouponCode = coupon.code;
+            coupon.usedCount += 1;
+            await coupon.save({ session });
+          }
         }
       }
 
@@ -126,6 +142,7 @@ class OrderService {
               "",
             items: orderItems,
             description: description || "",
+            couponCode: appliedCouponCode || undefined,
             totalAmount,
             discountAmount: discount,
             deliveryFee,

@@ -8,6 +8,7 @@ router.use(protect, restrictTo('ADMIN'));
 
 router.post('/', adminCouponController.createCoupon); 
 router.get('/', adminCouponController.getAllCoupons); 
+router.put('/:id', adminCouponController.updateCoupon);
 router.delete('/:id', adminCouponController.deleteCoupon); 
 
 module.exports = router;

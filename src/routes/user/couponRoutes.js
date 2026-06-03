@@ -4,6 +4,7 @@ const userCouponController = require('../../controllers/user/couponController');
 const { protect } = require('../../middlewares/auth');
 
 
+router.get('/', userCouponController.getActiveCoupons);
 router.post('/apply', protect, userCouponController.applyCoupon);
 
 module.exports = router;

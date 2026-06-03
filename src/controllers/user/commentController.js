@@ -15,6 +15,7 @@ exports.createComment = async (req, res) => {
       user: req.user._id,
       name,
       text,
+      status: "approved",
     });
 
     res.status(201).json({
@@ -33,10 +34,11 @@ exports.createComment = async (req, res) => {
 exports.getCommentsByBook = async (req, res) => {
   try {
     const { bookId } = req.params;
-    const comments = await Comment.find({ book: bookId }).populate(
-      "user",
-      "name email",
-    );
+    const comments = await Comment.find({
+      book: bookId,
+      status: { $in: ["approved", "aproved"] },
+    }).populate("user", "name email");
+
     res.status(200).json({
       success: true,
       data: comments,

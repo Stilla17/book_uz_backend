@@ -4,20 +4,27 @@ const errorHandler = (err, req, res, next) => {
 
   console.error(err);
 
-  if (err.name === 'CastError') {
-    error.message = 'Resurs topilmadi';
+  if (err.name === "CastError") {
+    error.message = "Resurs topilmadi";
     res.status(404);
   }
 
   if (err.code === 11000) {
-    error.message = 'Bunday ma’lumot bazada mavjud';
+    error.message = "Bunday ma'lumot bazada mavjud";
+    res.status(400);
+  }
+
+  if (err.name === "ValidationError") {
+    error.message = Object.values(err.errors)
+      .map((validationError) => validationError.message)
+      .join(", ");
     res.status(400);
   }
 
   res.status(res.statusCode === 200 ? 500 : res.statusCode).json({
     success: false,
-    message: error.message || 'Server xatosi',
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    message: error.message || "Server xatosi",
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
   });
 };
 

@@ -19,6 +19,8 @@ const OrderSchema = new mongoose.Schema(
       phone: String,
     },
     description: { type: String },
+    couponCode: { type: String },
+    discountAmount: { type: Number, default: 0 },
     deliveryType: {
       type: String,
       enum: ["PICKUP", "DELIVERY", "POST"],

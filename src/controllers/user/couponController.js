@@ -1,6 +1,19 @@
 const Coupon = require('../../models/Coupon');
 const Cart = require('../../models/Cart');
 const apiResponse = require('../../utils/apiResponse');
+const { calculateCouponDiscount, getCouponValue } = require('../../utils/couponDiscount');
+
+/**
+ * Faol kuponlar ro'yxati
+ */
+
+exports.getActiveCoupons = async (req, res, next) => {
+  try {
+    const coupons = await Coupon.find({ isActive: true }).sort("-createdAt");
+
+    apiResponse(res, 200, true, "Faol kuponlar ro'yxati", coupons);
+  } catch (error) { next(error); }
+};
 
 /**
  * Kuponni savatga qo'llash (Apply Coupon)
@@ -21,20 +34,32 @@ exports.applyCoupon = async (req, res, next) => {
       return apiResponse(res, 400, false, "Kuponning amal qilish muddati tugagan");
     }
 
-    const cart = await Cart.findOne({ user: userId });
+    if (coupon.usageLimit > 1 && coupon.usedCount >= coupon.usageLimit) {
+      return apiResponse(res, 400, false, "Kupon ishlatish limiti tugagan");
+    }
+
+    const cart = await Cart.findOne({ user: userId }).populate('items.product');
     if (!cart) return apiResponse(res, 404, false, "Savat topilmadi");
 
     if (cart.totalPrice < coupon.minOrderAmount) {
       return apiResponse(res, 400, false, `Minimal xarid summasi ${coupon.minOrderAmount} so'm bo'lishi kerak`);
     }
 
-    const discountAmount = (cart.totalPrice * coupon.discountPercentage) / 100;
-    cart.totalPrice = cart.totalPrice - discountAmount;
-    
-    await cart.save();
+    const { eligibleSubtotal, discountAmount } = calculateCouponDiscount(coupon, cart.items);
 
-    apiResponse(res, 200, true, `Kupon qo'llandi: -${coupon.discountPercentage}%`, {
-      finalPrice: cart.totalPrice,
+    if (eligibleSubtotal <= 0) {
+      return apiResponse(res, 400, false, "Bu kupon savatdagi kitoblarga tegishli emas");
+    }
+
+    const finalPrice = cart.totalPrice - discountAmount;
+    const couponValue = getCouponValue(coupon);
+    const discountLabel = coupon.type === 'FIXED'
+      ? `${couponValue} so'm`
+      : `${couponValue}%`;
+
+    apiResponse(res, 200, true, `Kupon qo'llandi: -${discountLabel}`, {
+      finalPrice,
+      eligibleSubtotal,
       discountAmount
     });
   } catch (error) { next(error); }
