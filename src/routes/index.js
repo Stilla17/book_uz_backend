@@ -19,6 +19,7 @@ const commentRoutes = require("./user/commentRoutes");
 const locationRoutes = require("./user/locationRoutes");
 const branchLocationRoutes = require("./user/branchLocationRoutes");
 const newsRoutes = require("./user/newsRoutes");
+const aiRoutes = require("./user/aiRoutes");
 
 const clickRoutes = require("./click"); // Click.uz uchun marshrutlar
 const paymeRoutes = require("./payme"); // Payme uchun marshrutlar
@@ -59,6 +60,7 @@ router.use("/comments", commentRoutes); // Kommentlar uchun umumiy marshrutlar
 router.use("/locations", locationRoutes); // Region va districtlar uchun umumiy marshrutlar
 router.use("/branch-locations", branchLocationRoutes); // Filial locationlari uchun umumiy marshrutlar
 router.use("/news", newsRoutes); // Yangiliklar uchun umumiy marshrutlar
+router.use("/ai", aiRoutes);
 
 router.use("/click", clickRoutes); // Click.uz uchun marshrutlar
 router.use("/payme", paymeRoutes); // Payme uchun marshrutlar

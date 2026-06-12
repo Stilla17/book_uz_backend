@@ -21,14 +21,16 @@ const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const { errorHandler } = require("./middlewares/error");
 const { initSocket } = require("./sockets/socket");
+const { startAmoContactSync } = require("./utils/amocrmContactSync");
 
 const routes = require("./routes/index");
 const { openApiDocument, swaggerHtml } = require("./docs/swagger");
 
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
-  // startSyncCron(); // Server ishga tushganda Moysklad bilan sinxronizatsiyani boshlaymiz
-  // syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
+  startAmoContactSync();
+  startSyncCron(); // Server ishga tushganda Moysklad bilan sinxronizatsiyani boshlaymiz
+  syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
 });
 
 const app = express();

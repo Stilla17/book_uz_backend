@@ -14,7 +14,7 @@ exports.forgotPassword = async (req, res, next) => {
         const user = await User.findOne({ email });
         if (!user) return apiResponse(res, 404, false, "Foydalanuvchi topilmadi");
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
         await OTP.deleteMany({ userId: user._id });
         await OTP.create({ userId: user._id, otp, type: method === 'TELEGRAM' ? 'SMS' : 'EMAIL' });

@@ -3,9 +3,16 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const Coupon = require("../models/Coupon");
+const Counter = require("../models/Counter");
 const { calculateCouponDiscount } = require("../utils/couponDiscount");
 
 class OrderService {
+  createError(message, statusCode = 400) {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+  }
+
   async createOrder(userId, orderData) {
     const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
       ? userId
@@ -19,6 +26,19 @@ class OrderService {
       couponCode,
     } = orderData;
 
+    if (!shippingAddress?.phone) {
+      throw this.createError("Telefon raqami yuborilishi shart");
+    }
+
+    if (
+      !normalizedUserId &&
+      !guestName &&
+      !shippingAddress?.fullName &&
+      !shippingAddress?.name
+    ) {
+      throw this.createError("Buyurtmachi ismi yuborilishi shart");
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -27,9 +47,9 @@ class OrderService {
       let sourceItems = [];
 
       if (normalizedUserId) {
-        cart = await Cart.findOne({ user: normalizedUserId }).populate(
-          "items.product",
-        );
+        cart = await Cart.findOne({ user: normalizedUserId })
+          .session(session)
+          .populate("items.product");
         sourceItems = cart?.items || [];
       }
 
@@ -47,13 +67,18 @@ class OrderService {
         sourceItems = orderData.items
           .map((item) => ({
             product: productMap.get(String(item.product)),
-            quantity: Number(item.quantity) > 0 ? Number(item.quantity) : 1,
+            quantity: Number(item.quantity),
           }))
-          .filter((item) => item.product);
+          .filter(
+            (item) =>
+              item.product &&
+              Number.isInteger(item.quantity) &&
+              item.quantity > 0,
+          );
       }
 
       if (!sourceItems.length) {
-        throw new Error("Savat bo'sh, buyurtma berib bo'lmaydi");
+        throw this.createError("Savat bo'sh, buyurtma berib bo'lmaydi");
       }
 
       let subTotal = 0;
@@ -62,33 +87,39 @@ class OrderService {
       // 3. Mahsulotlarni tekshirish va omborni yangilash
       for (const item of sourceItems) {
         const product = item.product;
+        const quantity = Number(item.quantity);
 
-        if (!product || product.stock < item.quantity) {
-          throw new Error(
+        if (
+          !product ||
+          !Number.isInteger(quantity) ||
+          quantity <= 0 ||
+          product.stock < quantity
+        ) {
+          throw this.createError(
             `Omborda yetarli emas: ${product ? product.title.uz : "Noma'lum mahsulot"}`,
           );
         }
 
         const price =
           product.discountPrice > 0 ? product.discountPrice : product.price;
-        subTotal += price * item.quantity;
+        subTotal += price * quantity;
 
         orderItems.push({
           product: product._id,
-          quantity: item.quantity,
+          quantity,
           priceAtTime: price, // Sotib olingan vaqtdagi narxni muhrlaymiz
         });
 
         // Ombordan kamaytirish. Product documentni save qilmaymiz, chunki eski importlardan
         // author/category populated object bo'lib qolgan productlar validatsiyada yiqilishi mumkin.
         const stockUpdate = await Product.updateOne(
-          { _id: product._id, stock: { $gte: item.quantity } },
-          { $inc: { stock: -item.quantity } },
+          { _id: product._id, stock: { $gte: quantity } },
+          { $inc: { stock: -quantity } },
           { session },
         );
 
         if (stockUpdate.modifiedCount !== 1) {
-          throw new Error(
+          throw this.createError(
             `Omborda yetarli emas: ${product.title?.uz || "Noma'lum mahsulot"}`,
           );
         }
@@ -105,11 +136,13 @@ class OrderService {
         const minOrderAmount = Number(coupon?.minOrderAmount || 0);
         const usageLimit = Number(coupon?.usageLimit || 0);
         const usedCount = Number(coupon?.usedCount || 0);
-        const hasUsageLimit = usageLimit > 1;
+        const hasUsageLimit = usageLimit > 0;
+        const now = Date.now();
 
         if (
           coupon &&
-          Date.now() < coupon.expiryDate &&
+          now >= coupon.startDate &&
+          now <= coupon.endDate &&
           subTotal >= minOrderAmount &&
           (!hasUsageLimit || usedCount < usageLimit)
         ) {
@@ -119,16 +152,38 @@ class OrderService {
           );
 
           if (eligibleSubtotal > 0) {
-            discount = discountAmount;
-            appliedCouponCode = coupon.code;
-            coupon.usedCount += 1;
-            await coupon.save({ session });
+            const usageFilter = { _id: coupon._id };
+            if (hasUsageLimit) {
+              usageFilter.usedCount = { $lt: usageLimit };
+            }
+
+            const usageUpdate = await Coupon.updateOne(
+              usageFilter,
+              { $inc: { usedCount: 1 } },
+              { session },
+            );
+
+            if (usageUpdate.modifiedCount === 1) {
+              discount = discountAmount;
+              appliedCouponCode = coupon.code;
+            }
           }
         }
       }
 
-      const deliveryFee = deliveryType === "EXPRESS" ? 20000 : 20000;
+      const deliveryFee = deliveryType === "PICKUP" ? 0 : 20000;
       const totalAmount = subTotal - discount + deliveryFee;
+
+      const counter = await Counter.findOneAndUpdate(
+        { _id: "orderNumber" },
+        { $inc: { sequence: 1 } },
+        {
+          new: true,
+          upsert: true,
+          session,
+        },
+      );
+      const orderNumber = counter.sequence;
 
       // 5. Buyurtma yaratish
       const order = await Order.create(
@@ -149,6 +204,7 @@ class OrderService {
             shippingAddress,
             deliveryType,
             paymentType,
+            orderNumber,
             status: "PENDING",
           },
         ],
@@ -167,6 +223,72 @@ class OrderService {
       return order[0];
     } catch (error) {
       // Xato bo'lsa, barcha o'zgarishlarni bekor qilamiz
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  async cancelOrder(userId, orderId) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const order = await Order.findOne({
+        _id: orderId,
+        user: userId,
+      }).session(session);
+
+      if (!order) {
+        throw this.createError("Buyurtma topilmadi", 404);
+      }
+
+      if (order.status !== "PENDING") {
+        throw this.createError(
+          "Bu buyurtmani bekor qilib bo'lmaydi, chunki u jarayonda",
+        );
+      }
+
+      if (order.paymentStatus === "PAID") {
+        throw this.createError(
+          "To'langan buyurtmani operator orqali bekor qiling",
+          409,
+        );
+      }
+
+      const cancelledOrder = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          user: userId,
+          status: "PENDING",
+        },
+        { $set: { status: "CANCELLED" } },
+        { new: true, session },
+      );
+
+      if (!cancelledOrder) {
+        throw this.createError(
+          "Buyurtma holati o'zgargan, qayta urinib ko'ring",
+          409,
+        );
+      }
+
+      if (order.items.length) {
+        await Product.bulkWrite(
+          order.items.map((item) => ({
+            updateOne: {
+              filter: { _id: item.product },
+              update: { $inc: { stock: item.quantity } },
+            },
+          })),
+          { session },
+        );
+      }
+
+      await session.commitTransaction();
+      return cancelledOrder;
+    } catch (error) {
       await session.abortTransaction();
       throw error;
     } finally {

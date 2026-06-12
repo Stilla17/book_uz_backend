@@ -10,6 +10,7 @@ router.use(protect);
 /**
  * PROFIL MA'LUMOTLARI
  */
+router.get('/profile', userController.getProfile);
 router.patch('/profile', upload.single('avatar'), userController.updateProfile);
 router.patch('/update-profile', upload.single('avatar'), userController.updateProfile);
 router.patch('/update-password', userController.updatePassword);    

@@ -1,5 +1,4 @@
 const axios = require("axios");
-const cron = require("node-cron");
 const Product = require("../models/Product");
 
 const MOYSKLAD_API_URL = process.env.MOYSKLAD_API_URL;
@@ -10,6 +9,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
 const RETRY_DELAYS_MS = [5000, 15000, 30000];
+const FIVE_HOURS_IN_MS = 5 * 60 * 60 * 1000;
+
+let isSyncing = false;
 
 const getMoyskladBaseUrl = () => {
   if (!MOYSKLAD_API_URL) {
@@ -120,6 +122,13 @@ const fetchAssortmentChunk = async (filterString) =>
   );
 
 const syncMoyskladProducts = async () => {
+  if (isSyncing) {
+    console.log("MoySklad sinxronizatsiyasi hali davom etmoqda");
+    return;
+  }
+
+  isSyncing = true;
+
   try {
     console.log("🔄 Sinxronizatsiya boshlandi...");
 
@@ -237,13 +246,18 @@ const syncMoyskladProducts = async () => {
     console.log(`✅ Yakunlandi. ${updatedCount} ta narx yangilandi.`);
   } catch (error) {
     console.error("❌ Xato:", error.message);
+  } finally {
+    isSyncing = false;
   }
 };
-// Cron Job: Har soatda bir marta ishga tushadi (00:00, 01:00 va h.k.)
+
+// Server ishga tushgan vaqtdan boshlab har 5 soatda sinxronizatsiya qiladi.
 const startSyncCron = () => {
-  cron.schedule("0 */5 * * *", () => {
+  setInterval(() => {
     syncMoyskladProducts();
-  });
+  }, FIVE_HOURS_IN_MS);
+
+  console.log("MoySklad sinxronizatsiyasi har 5 soatga sozlandi");
 };
 
 module.exports = { syncMoyskladProducts, startSyncCron };

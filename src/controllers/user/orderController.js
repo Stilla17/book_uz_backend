@@ -14,7 +14,7 @@ const { buildPaymeCheckoutUrl } = require('../../payment/payme/paymeService');
 
 const placeOrder = async (req, res, next) => {
   try {
-    const order = await orderService.createOrder(req.user?._id || req.body.user || null, req.body);
+    const order = await orderService.createOrder(req.user?._id || null, req.body);
     const responseData = order.toObject ? order.toObject() : order;
 
     if (order.paymentType === 'CLICK') {
@@ -99,6 +99,43 @@ const getOrderDetails = async (req, res, next) => {
   }
 };
 
+const trackGuestOrder = async (req, res, next) => {
+  try {
+    const orderNumber = Number(req.body.orderNumber);
+    const phone = String(req.body.phone || '').trim();
+
+    if (!Number.isInteger(orderNumber) || !phone) {
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Order raqami va telefon raqami yuborilishi shart",
+      );
+    }
+
+    const order = await Order.findOne({
+      orderNumber,
+      user: { $exists: false },
+      "shippingAddress.phone": phone,
+    }).populate({
+      path: 'items.product',
+      select: 'title images price author publisher',
+      populate: [
+        { path: 'author' },
+        { path: 'publisher' },
+      ],
+    });
+
+    if (!order) {
+      return apiResponse(res, 404, false, "Buyurtma topilmadi");
+    }
+
+    apiResponse(res, 200, true, "Buyurtma holati", order);
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * 4. Buyurtmani bekor qilish (Cancel Order)
  * Faqat 'PENDING' statusidagilarni bekor qilish mumkin
@@ -106,21 +143,7 @@ const getOrderDetails = async (req, res, next) => {
 
 const cancelOrder = async (req, res, next) => {
   try {
-    const order = await Order.findOne({ 
-      _id: req.params.id, 
-      user: req.user._id 
-    });
-
-    if (!order) {
-      return apiResponse(res, 404, false, "Buyurtma topilmadi");
-    }
-
-    if (order.status !== 'PENDING') {
-      return apiResponse(res, 400, false, "Bu buyurtmani bekor qilib bo'lmaydi, chunki u jarayonda");
-    }
-
-    order.status = 'CANCELLED';
-    await order.save();
+    const order = await orderService.cancelOrder(req.user._id, req.params.id);
 
     socketEvents.emitOrderStatusUpdate(req.user._id, order._id, 'CANCELLED');
 
@@ -133,19 +156,45 @@ const cancelOrder = async (req, res, next) => {
 
 const reOrder = async (req, res, next) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
     if (!order) return apiResponse(res, 404, false, "Buyurtma topilmadi");
+
+    const productIds = order.items.map(item => item.product);
+    const products = await Product.find({ _id: { $in: productIds } });
+    const productMap = new Map(
+      products.map(product => [product._id.toString(), product]),
+    );
+
+    const unavailableItem = order.items.find((item) => {
+      const product = productMap.get(item.product.toString());
+      return !product || product.stock < item.quantity;
+    });
+
+    if (unavailableItem) {
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Buyurtmadagi ayrim mahsulotlar mavjud emas yoki omborda yetarli emas",
+      );
+    }
 
     let cart = await Cart.findOne({ user: req.user._id });
     if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
 
     for (const item of order.items) {
+      const product = productMap.get(item.product.toString());
       const itemIndex = cart.items.findIndex(p => p.product.toString() === item.product.toString());
       if (itemIndex > -1) {
         cart.items[itemIndex].quantity += item.quantity;
       } else {
-        const product = await Product.findById(item.product);
-        cart.items.push({ product: item.product, quantity: item.quantity, price: product.price });
+        const price = product.discountPrice > 0
+          ? product.discountPrice
+          : product.price;
+        cart.items.push({ product: item.product, quantity: item.quantity, price });
       }
     }
 
@@ -158,6 +207,7 @@ module.exports = {
   placeOrder, 
   getMyOrders, 
   getOrderDetails, 
+  trackGuestOrder,
   cancelOrder,
   reOrder
 };

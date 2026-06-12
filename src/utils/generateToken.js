@@ -1,14 +1,14 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: '15m', // Qisqa muddatli access token
+    expiresIn: process.env.JWT_ACCESS_EXPIRE || "1d",
   });
 };
 
 const generateRefreshToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: '30d', // Uzun muddatli refresh token
+    expiresIn: process.env.JWT_REFRESH_EXPIRE || "7d",
   });
 };
 

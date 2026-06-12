@@ -32,7 +32,29 @@ exports.getAllOrders = async (req, res, next) => {
 };
 
 /**
- * 2. Buyurtma statusini yangilash (Eng muhim joyi)
+ * 2. Bitta buyurtma tafsilotlarini olish
+ */
+exports.getOrderById = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name email phone avatar')
+      .populate(
+        'items.product',
+        'title slug price discountPrice images stock barcode author publisher'
+      );
+
+    if (!order) {
+      return apiResponse(res, 404, false, "Buyurtma topilmadi");
+    }
+
+    apiResponse(res, 200, true, "Buyurtma tafsilotlari", order);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 3. Buyurtma statusini yangilash (Eng muhim joyi)
  */
 exports.updateOrderStatus = async (req, res, next) => {
   try {
@@ -56,7 +78,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 };
 
 /**
- * 3. Buyurtmani o'chirish (Faqat bekor qilinganlarni)
+ * 4. Buyurtmani o'chirish (Faqat bekor qilinganlarni)
  */
 
 exports.deleteOrder = async (req, res, next) => {

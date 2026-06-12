@@ -3,8 +3,17 @@ const Product = require('../../models/Product');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const apiResponse = require('../../utils/apiResponse');
+const cloudinary = require('../../config/cloudinary');
+const { isValidEmail, isValidPhone } = require('../../utils/validator');
 
 const WISHLIST_PRODUCT_SELECT = 'title price discountPrice images ratingAvg slug author publisher stock';
+
+const getPublicId = (url) => {
+  const parts = url.split('/');
+  const fileName = parts[parts.length - 1].split('.')[0];
+  const folder = parts.slice(-3, -1).join('/');
+  return `${folder}/${fileName}`;
+};
 
 const normalizeWishlistProductIds = (wishlist = []) => {
   const source = Array.isArray(wishlist) ? wishlist : [];
@@ -49,14 +58,61 @@ const getProfile = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, email, phone, bio } = req.body;
     const user = await User.findById(req.user._id);
 
+    if (!user) {
+      return apiResponse(res, 404, false, "Foydalanuvchi topilmadi");
+    }
+
     const updateData = {};
-    if (name) updateData.name = name;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string') {
+        return apiResponse(res, 400, false, "Ism matn bo'lishi kerak");
+      }
+      const normalizedName = name.trim();
+      if (!normalizedName) {
+        return apiResponse(res, 400, false, "Ism bo'sh bo'lishi mumkin emas");
+      }
+      updateData.name = normalizedName;
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== 'string') {
+        return apiResponse(res, 400, false, "Email matn bo'lishi kerak");
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        return apiResponse(res, 400, false, "Email formati noto'g'ri");
+      }
+      updateData.email = normalizedEmail;
+    }
+
+    if (phone !== undefined) {
+      if (typeof phone !== 'string') {
+        return apiResponse(res, 400, false, "Telefon raqam matn bo'lishi kerak");
+      }
+      const normalizedPhone = phone.trim();
+      if (!isValidPhone(normalizedPhone)) {
+        return apiResponse(
+          res,
+          400,
+          false,
+          "Telefon raqam formati noto'g'ri. Masalan +998901234567",
+        );
+      }
+      updateData.phone = normalizedPhone;
+    }
+
+    if (bio !== undefined) {
+      if (typeof bio !== 'string') {
+        return apiResponse(res, 400, false, "Bio matn bo'lishi kerak");
+      }
+      updateData.bio = bio.trim();
+    }
 
     if (req.file) {
-      // 1. Agar eski rasm bo'lsa, uni Cloudinary'dan o'chirib tashlaymiz
       if (user.avatar) {
         const oldPublicId = getPublicId(user.avatar);
         await cloudinary.uploader.destroy(oldPublicId).catch(e => console.log("Eski rasm o'chirilmadi:", e));
@@ -64,10 +120,14 @@ const updateProfile = async (req, res, next) => {
       updateData.avatar = req.file.path;
     }
 
+    if (!Object.keys(updateData).length) {
+      return apiResponse(res, 400, false, "Yangilash uchun ma'lumot yuborilmadi");
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id, 
       { $set: updateData }, 
-      { new: true }
+      { new: true, runValidators: true }
     ).select('-password -refreshToken');
 
     apiResponse(res, 200, true, "Profil yangilandi", updatedUser);

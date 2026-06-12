@@ -22,7 +22,7 @@ const initTelegramBot = () => {
           return bot.sendMessage(chatId, "Xatolik! Bu Telegram akkaunt ushbu Emailga ulanmagan.");
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
         await OTP.deleteMany({ userId: user._id });
         await OTP.create({ userId: user._id, otp, type: 'SMS' });
 

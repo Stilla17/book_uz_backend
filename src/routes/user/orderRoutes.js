@@ -5,6 +5,7 @@ const { optionalProtect, protect } = require('../../middlewares/auth');
 
 
 router.post('/', optionalProtect, orderController.placeOrder); // Buyurtma berish
+router.post('/guest/track', orderController.trackGuestOrder); // Guest buyurtmani kuzatish
 
 router.use(protect);
 router.get('/my-orders', orderController.getMyOrders);  // Mening buyurtmalarim

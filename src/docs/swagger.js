@@ -47,6 +47,7 @@ const endpoints = [
   ["post", "/comments", "Comments", "Komment qoldirish", true],
 
   ["post", "/orders", "Orders", "Buyurtma yaratish"],
+  ["post", "/orders/guest/track", "Orders", "Guest buyurtmani kuzatish"],
   ["get", "/orders/my-orders", "Orders", "Mening buyurtmalarim", true],
   ["get", "/orders/{id}", "Orders", "Buyurtma tafsiloti", true],
   ["put", "/orders/{id}/cancel", "Orders", "Buyurtmani bekor qilish", true],
@@ -70,6 +71,7 @@ const endpoints = [
   ["put", "/my-reviews/{id}", "Reviews", "Sharhni tahrirlash", true],
   ["delete", "/my-reviews/{id}", "Reviews", "Sharhni o'chirish", true],
 
+  ["get", "/users/profile", "Users", "Profil ma'lumotlari", true],
   ["patch", "/users/profile", "Users", "Profilni yangilash", true, true],
   ["patch", "/users/update-profile", "Users", "Profilni yangilash", true, true],
   ["patch", "/users/update-password", "Users", "Parolni o'zgartirish", true],
@@ -143,6 +145,7 @@ const endpoints = [
   ["patch", "/admin/users/{id}/reset-password", "Admin Users", "Foydalanuvchi parolini tiklash", true],
   ["delete", "/admin/users/{id}", "Admin Users", "Foydalanuvchini o'chirish", true],
   ["get", "/admin/orders", "Admin Orders", "Buyurtmalar ro'yxati", true],
+  ["get", "/admin/orders/{id}", "Admin Orders", "Buyurtma tafsilotlari", true],
   ["patch", "/admin/orders/{id}/status", "Admin Orders", "Buyurtma statusini yangilash", true],
   ["delete", "/admin/orders/{id}", "Admin Orders", "Buyurtmani o'chirish", true],
   ["post", "/admin/coupons", "Admin Coupons", "Kupon yaratish", true],
