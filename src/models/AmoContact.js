@@ -8,6 +8,10 @@ const amoContactSchema = new mongoose.Schema(
       sparse: true,
       index: true,
     },
+    birthdaySmsSentYear: {
+      type: Number,
+      default: null,
+    },
     moyskladId: {
       type: String,
       unique: true,
@@ -31,6 +35,15 @@ const amoContactSchema = new mongoose.Schema(
     birthDate: Date,
     moyskladTags: [String],
     lastSaleAt: Date,
+    lastOrderAt: Date,
+    ordersCount: {
+      type: Number,
+      default: 0,
+    },
+    ordersAmount: {
+      type: Number,
+      default: 0,
+    },
     salesCount: {
       type: Number,
       default: 0,

@@ -2,6 +2,7 @@ const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") }); // 1. Barcha o'zgaruvchilardan oldin turishi shart
 const dns = require("dns");
 const { syncMoyskladProducts, startSyncCron } = require("./utils/moyskladSync");
+const { startBirthdaySmsCron } = require("./utils/birthdaySmsCron");
 
 // Node DNS'ni majburan Cloudflare'ga o'rnatamiz
 dns.setServers(["1.1.1.1", "1.0.0.1"]);
@@ -29,8 +30,9 @@ const { openApiDocument, swaggerHtml } = require("./docs/swagger");
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
   startAmoContactSync();
-  startSyncCron(); // Server ishga tushganda Moysklad bilan sinxronizatsiyani boshlaymiz
-  syncMoyskladProducts(); // Server ishga tushganda bir martalik sinxronizatsiyani amalga oshiramiz
+  startSyncCron();
+  syncMoyskladProducts();
+  // startBirthdaySmsCron();
 });
 
 const app = express();

@@ -108,10 +108,66 @@ async function getCounterpartyStats() {
   return statsByCounterpartyId;
 }
 
+async function getCustomerOrderStats() {
+  const statsByCounterpartyId = new Map();
+  let offset = 0;
+
+  while (true) {
+    const { data } = await axios.get(
+      `${getBaseUrl()}/entity/customerorder`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.MOYSKLAD_API_KEY}`,
+          "Cache-Control": "no-cache",
+        },
+        params: {
+          limit: PAGE_SIZE,
+          offset,
+        },
+        timeout: 30000,
+      },
+    );
+
+    const rows = data.rows || [];
+
+    for (const order of rows) {
+      const counterpartyId = order.agent?.meta?.href?.split("/").pop();
+
+      if (!counterpartyId) continue;
+
+      const current = statsByCounterpartyId.get(counterpartyId) || {
+        ordersCount: 0,
+        ordersAmount: 0,
+        lastOrderAt: null,
+      };
+      const orderDate = order.moment ? new Date(order.moment) : null;
+
+      current.ordersCount += 1;
+      current.ordersAmount += Number(order.sum) || 0;
+
+      if (
+        orderDate &&
+        !Number.isNaN(orderDate.getTime()) &&
+        (!current.lastOrderAt || orderDate > current.lastOrderAt)
+      ) {
+        current.lastOrderAt = orderDate;
+      }
+
+      statsByCounterpartyId.set(counterpartyId, current);
+    }
+
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  return statsByCounterpartyId;
+}
+
 async function syncMoyskladCustomers() {
-  const [customers, statsByCounterpartyId] = await Promise.all([
+  const [customers, statsByCounterpartyId, ordersByCounterpartyId] = await Promise.all([
     getAllMoyskladCustomers(),
     getCounterpartyStats(),
+    getCustomerOrderStats(),
   ]);
   const contacts = await AmoContact.find(
     {},
@@ -143,6 +199,7 @@ async function syncMoyskladCustomers() {
     const phone = normalizePhone(formattedPhone);
     const email = normalizeEmail(customer.email);
     const stats = statsByCounterpartyId.get(customer.id);
+    const orderStats = ordersByCounterpartyId.get(customer.id);
     const existingId =
       byMoyskladId.get(customer.id) ||
       (phone ? byPhone.get(phone) : null) ||
@@ -155,6 +212,9 @@ async function syncMoyskladCustomers() {
         lastSaleAt: stats?.lastDemandDate
           ? new Date(stats.lastDemandDate)
           : null,
+        lastOrderAt: orderStats?.lastOrderAt || null,
+        ordersCount: orderStats?.ordersCount || 0,
+        ordersAmount: (orderStats?.ordersAmount || 0) / 100,
         salesCount: stats?.demandsCount || 0,
         averageCheck: (stats?.averageReceipt || 0) / 100,
         salesAmount: (stats?.demandsSum || customer.salesAmount || 0) / 100,
@@ -221,5 +281,6 @@ async function syncMoyskladCustomers() {
 module.exports = {
   getAllMoyskladCustomers,
   getCounterpartyStats,
+  getCustomerOrderStats,
   syncMoyskladCustomers,
 };

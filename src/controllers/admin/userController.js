@@ -1,39 +1,97 @@
 const User = require('../../models/User');
+const AmoContact = require('../../models/AmoContact');
 const bcrypt = require('bcrypt');
 const apiResponse = require('../../utils/apiResponse');
 const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 const { buildSearchRegex } = require('../../utils/searchRegex');
 
 /**
- * 1. Barcha foydalanuvchilarni olish (Filtr va Pagination bilan)
+ * 1. Barcha foydalanuvchilar va AmoCRM kontaktlarini olish
  */
 
 const getAllUsersAdmin = async (req, res, next) => {
   try {
-    const { role, search } = req.query;
+    const { role, search, all } = req.query;
+    const returnAll = String(all).toLowerCase() === 'true';
     const paginationParams = getPaginationParams(req.query);
-    let filter = {};
-    if (role) filter.role = role;
+    const userFilter = {};
+    const amoContactFilter = {};
+
+    if (role) userFilter.role = role.toUpperCase();
 
     if (search) {
       const searchRegex = buildSearchRegex(search);
-      filter.$or = [
+      userFilter.$or = [
         { name: searchRegex },
-        { email: searchRegex }
+        { email: searchRegex },
+        { phone: searchRegex }
+      ];
+      amoContactFilter.$or = [
+        { name: searchRegex },
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { phones: searchRegex },
+        { emails: searchRegex }
       ];
     }
 
-    const users = await User.find(filter)
+    const userQuery = User.find(userFilter)
       .select('-password -refreshToken')
-      .sort('-createdAt')
-      .skip(paginationParams.skip)
-      .limit(paginationParams.limit);
+      .sort('-createdAt');
+    const amoContactQuery = AmoContact.find(amoContactFilter)
+      .sort('-createdAt');
 
-    const total = await User.countDocuments(filter);
+    if (!returnAll) {
+      userQuery
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit);
+      amoContactQuery
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit);
+    }
+
+    const [users, usersTotal, amoContacts, amoContactsTotal] = await Promise.all([
+      userQuery,
+      User.countDocuments(userFilter),
+      amoContactQuery,
+      AmoContact.countDocuments(amoContactFilter)
+    ]);
+
+    const total = usersTotal + amoContactsTotal;
+    const usersPaginationParams = returnAll
+      ? { page: 1, limit: usersTotal || 1 }
+      : paginationParams;
+    const amoContactsPaginationParams = returnAll
+      ? { page: 1, limit: amoContactsTotal || 1 }
+      : paginationParams;
+    const combinedPaginationParams = returnAll
+      ? { page: 1, limit: total || 1 }
+      : {
+          page: paginationParams.page,
+          limit: paginationParams.limit * 2
+        };
 
     apiResponse(res, 200, true, "Foydalanuvchilar ro'yxati", {
       users,
-      pagination: buildPagination({ ...paginationParams, total })
+      amoContacts,
+      items: [...users, ...amoContacts],
+      pagination: buildPagination({
+        ...combinedPaginationParams,
+        total
+      }),
+      usersPagination: buildPagination({
+        ...usersPaginationParams,
+        total: usersTotal
+      }),
+      amoContactsPagination: buildPagination({
+        ...amoContactsPaginationParams,
+        total: amoContactsTotal
+      }),
+      totals: {
+        users: usersTotal,
+        amoContacts: amoContactsTotal,
+        all: total
+      }
     });
   } catch (error) { next(error); }
 };
