@@ -1,5 +1,12 @@
 const mongoose = require("mongoose");
 const Category = require("./Category");
+const { findSubgenreByIdentifier } = require("../utils/subgenreMatcher");
+
+const createProductValidationError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+};
 
 const ProductSchema = new mongoose.Schema(
   {
@@ -42,7 +49,7 @@ const ProductSchema = new mongoose.Schema(
       default: "other",
     },
     numberOfPage: { type: Number, min: 0 },
-
+    weight: { type: String, trim: true },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
@@ -84,7 +91,7 @@ ProductSchema.pre("validate", async function validateSubgenreBinding() {
 
   const category = await Category.findById(this.category).select("subgenres");
   if (!category) {
-    throw new Error("Tanlangan kategoriya topilmadi");
+    throw createProductValidationError("Tanlangan kategoriya topilmadi");
   }
 
   if (!category.subgenres.length) {
@@ -93,13 +100,22 @@ ProductSchema.pre("validate", async function validateSubgenreBinding() {
   }
 
   if (!this.subCategoryId) {
-    throw new Error("Bu kategoriya uchun subCategoryId majburiy");
+    throw createProductValidationError(
+      "Bu kategoriya uchun subCategoryId majburiy",
+    );
   }
 
-  const matchedSubgenre = category.subgenres.id(this.subCategoryId);
+  const matchedSubgenre = findSubgenreByIdentifier(
+    category.subgenres,
+    this.subCategoryId,
+  );
   if (!matchedSubgenre) {
-    throw new Error("Tanlangan subCategoryId bu kategoriyaga tegishli emas");
+    throw createProductValidationError(
+      "Tanlangan subCategoryId bu kategoriyaga tegishli emas",
+    );
   }
+
+  this.subCategoryId = matchedSubgenre._id;
 });
 
 ProductSchema.virtual("subgenre").get(function getSubgenre() {

@@ -7,6 +7,11 @@ const apiResponse = require("../../utils/apiResponse");
 const cloudinary = require("../../config/cloudinary");
 const { getPaginationParams, buildPagination } = require("../../utils/pagination");
 const { buildSearchRegex, normalizeSearchText } = require("../../utils/searchRegex");
+const {
+  findSubgenreByIdentifier,
+  resolveCategoryId,
+  resolveSubCategoryId,
+} = require("../../utils/subgenreMatcher");
 
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
@@ -46,9 +51,6 @@ const normalizePayload = (payload = {}) => {
   return normalized;
 };
 
-const resolveSubCategoryId = (payload = {}) =>
-  payload.subCategoryId ?? payload.subgenreId ?? payload.subgenre ?? null;
-
 const resolvePublisherId = (payload = {}) =>
   payload.publisher ?? payload.publish ?? payload.publisherId ?? null;
 
@@ -71,6 +73,26 @@ const validatePublisher = async (publisherId) => {
   return { publisherId: publisher._id };
 };
 
+const ensurePersistentSubgenreIds = async (category) => {
+  if (!category?.subgenres?.length) return;
+
+  const rawCategory = await Category.collection.findOne(
+    { _id: category._id },
+    { projection: { "subgenres._id": 1 } },
+  );
+  const hasMissingPersistedId = rawCategory?.subgenres?.some(
+    (subgenre) => !subgenre?._id,
+  );
+
+  if (!hasMissingPersistedId) return;
+
+  // Some imported categories have subgenres without persisted _id values.
+  // Mongoose creates temporary ids when hydrated; saving once makes them stable
+  // so Product validation can match subCategoryId on the next category read.
+  category.markModified("subgenres");
+  await category.save({ validateBeforeSave: false });
+};
+
 const validateCategorySubgenre = async (categoryId, subCategoryId) => {
   const category = await Category.findById(categoryId).select("subgenres");
   if (!category) {
@@ -86,11 +108,16 @@ const validateCategorySubgenre = async (categoryId, subCategoryId) => {
     };
   }
 
+  await ensurePersistentSubgenreIds(category);
+
   if (!normalizedSubCategoryId) {
     return { error: "Bu kategoriya uchun subCategoryId majburiy" };
   }
 
-  const matchedSubgenre = category.subgenres.id(normalizedSubCategoryId);
+  const matchedSubgenre = findSubgenreByIdentifier(
+    category.subgenres,
+    normalizedSubCategoryId,
+  );
   if (!matchedSubgenre) {
     return { error: "Tanlangan subCategoryId bu kategoriyaga tegishli emas" };
   }
@@ -281,7 +308,8 @@ const createProduct = async (req, res, next) => {
     if (price === undefined || price === null) {
       return apiResponse(res, 400, false, "price majburiy");
     }
-    if (!payload.category) {
+    const categoryId = resolveCategoryId(payload);
+    if (!categoryId) {
       return apiResponse(res, 400, false, "category majburiy");
     }
     if (!payload.author) {
@@ -293,7 +321,7 @@ const createProduct = async (req, res, next) => {
 
     const subCategoryId = resolveSubCategoryId(payload);
     const categoryValidation = await validateCategorySubgenre(
-      payload.category,
+      categoryId,
       subCategoryId,
     );
     if (categoryValidation.error) {
@@ -344,6 +372,7 @@ const createProduct = async (req, res, next) => {
 
     const createData = {
       ...payload,
+      category: categoryId,
       slug,
       price: priceNum,
       discountPrice: discountNum,
@@ -382,7 +411,7 @@ const updateProduct = async (req, res, next) => {
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
 
     const updateData = { ...payload };
-    const nextCategoryId = payload.category || product.category;
+    const nextCategoryId = resolveCategoryId(payload) || product.category;
     const hasSubCategoryField =
       Object.prototype.hasOwnProperty.call(payload, "subCategoryId") ||
       Object.prototype.hasOwnProperty.call(payload, "subgenreId") ||
@@ -412,6 +441,7 @@ const updateProduct = async (req, res, next) => {
     }
 
     updateData.subCategoryId = categoryValidation.subCategoryId;
+    updateData.category = nextCategoryId;
     updateData.publisher = publisherValidation.publisherId;
     delete updateData.subgenreId;
     delete updateData.subgenre;
