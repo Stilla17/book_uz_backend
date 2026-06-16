@@ -4,41 +4,10 @@ const apiResponse = require("../../utils/apiResponse");
 const slugify = require("../../utils/slugify");
 const { getPaginationParams, buildPagination } = require("../../utils/pagination");
 const { buildSearchRegex } = require("../../utils/searchRegex");
-
-const parseMaybeJson = (value) => {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch (error) {
-      return value;
-    }
-  }
-
-  return value;
-};
-
-const buildPublisherQuery = (idOrSlug) => {
-  if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
-    return { _id: idOrSlug };
-  }
-
-  return { slug: idOrSlug };
-};
-
-const getPublisherBooksCount = async (publisher) => {
-  const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
-
-  return Product.countDocuments({
-    $or: [
-      { publisher: publisher._id },
-      ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-    ],
-  });
-};
+const {
+  buildPublisherQuery,
+  getPublisherBooksCount,
+} = require("../../utils/publisher");
 
 // Yaratish Post
 exports.createPublisher = async (req, res) => {

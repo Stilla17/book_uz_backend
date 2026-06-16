@@ -4,22 +4,7 @@ const slugify = require('../../utils/slugify');
 const apiResponse = require('../../utils/apiResponse');
 const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 const { buildSearchRegex } = require('../../utils/searchRegex');
-
-const parseMaybeJson = (value) => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value);
-    } catch (error) {
-      return value;
-    }
-  }
-
-  return value;
-};
+const { parseMaybeJson } = require('../../utils/parsing');
 
 /**
  * 1. Yangi muallif qo'shish

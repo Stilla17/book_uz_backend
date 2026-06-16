@@ -3,14 +3,10 @@ const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 const { buildSearchRegex } = require('../../utils/searchRegex');
-
-const buildPublisherQuery = (idOrSlug) => {
-  if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
-    return { _id: idOrSlug };
-  }
-
-  return { slug: idOrSlug };
-};
+const {
+  buildPublisherQuery,
+  getPublisherBooksCount,
+} = require('../../utils/publisher');
 
 const getSortOption = (sort) => {
   switch (sort) {
@@ -50,17 +46,9 @@ const getAllPublishers = async (req, res, next) => {
 
     const publishersWithBookCount = await Promise.all(
       publishers.map(async (publisher) => {
-        const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
-        const booksCount = await Product.countDocuments({
-          $or: [
-            { publisher: publisher._id },
-            ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-          ]
-        });
-
         return {
           ...publisher,
-          booksCount
+          booksCount: await getPublisherBooksCount(publisher)
         };
       })
     );
@@ -87,17 +75,9 @@ const getPublisherByIdOrSlug = async (req, res, next) => {
       return apiResponse(res, 404, false, "Nashriyot topilmadi");
     }
 
-    const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
-    const booksCount = await Product.countDocuments({
-      $or: [
-        { publisher: publisher._id },
-        ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),
-      ]
-    });
-
     return apiResponse(res, 200, true, "Nashriyot ma'lumotlari", {
       ...publisher,
-      booksCount
+      booksCount: await getPublisherBooksCount(publisher)
     });
   } catch (error) {
     next(error);

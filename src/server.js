@@ -34,7 +34,7 @@ connectDB().then(() => {
   // startSyncCron();
   // syncMoyskladProducts();
   // startBirthdaySmsCron();
-  startTopSalesCron();
+  // startTopSalesCron();
 });
 
 const app = express();

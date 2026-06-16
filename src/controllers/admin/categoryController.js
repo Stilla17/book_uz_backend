@@ -7,48 +7,12 @@ const {
   buildPagination,
 } = require("../../utils/pagination");
 const { buildSearchRegex, normalizeSearchText } = require("../../utils/searchRegex");
-
-const getCategoryName = (category) => {
-  if (category.title?.uz) return category.title.uz;
-  if (typeof category.name === "string") return category.name;
-  return category.name?.uz || "";
-};
-
-const getSubgenreName = (subgenre) => {
-  if (!subgenre) return "";
-  if (subgenre.title?.uz) return subgenre.title.uz;
-  if (typeof subgenre.name === "string") return subgenre.name;
-  if (typeof subgenre === "string") return subgenre;
-  return subgenre.name?.uz || "";
-};
-
-const getIdString = (value) => {
-  if (!value) return "";
-  if (value._id) return value._id.toString();
-  return value.toString();
-};
-
-const getCategorySubgenres = (category) => {
-  if (Array.isArray(category.subgenres) && category.subgenres.length) {
-    return category.subgenres;
-  }
-
-  if (!Array.isArray(category.subcategories)) {
-    return [];
-  }
-
-  return category.subcategories.map((subcategory, index) => ({
-    _id: category.subcategoryIds?.[index] || subcategory,
-    name: getSubgenreName(subcategory),
-    order: index,
-    isActive: true,
-  }));
-};
-
-const parseMaybeJson = (value) => {
-  if (!value) return undefined;
-  return typeof value === "string" ? JSON.parse(value) : value;
-};
+const {
+  getCategoryName,
+  getSubgenreName,
+  getCategorySubgenres,
+} = require("../../utils/categoryView");
+const { parseMaybeJson, parseBoolean } = require("../../utils/parsing");
 
 const getPayload = (req) => req.body || {};
 
@@ -80,7 +44,7 @@ const normalizeSubgenres = (payload, category = null) => {
       isActive:
         subgenre.isActive === undefined
           ? existingSubgenre?.isActive !== false
-          : subgenre.isActive === "true" || subgenre.isActive === true,
+          : parseBoolean(subgenre.isActive),
     };
 
     if (subgenre._id || existingSubgenre?._id) {
@@ -146,8 +110,8 @@ const createCategory = async (req, res, next) => {
       icon: iconUrl,
       image: imageUrl,
       order: Number(order || 0),
-      isActive: isActive === "true" || isActive === true,
-      isFeatured: isFeatured === "true" || isFeatured === true,
+      isActive: parseBoolean(isActive),
+      isFeatured: parseBoolean(isFeatured),
     };
 
     const category = await Category.create(categoryData);
@@ -220,7 +184,7 @@ const addSubCategory = async (req, res, next) => {
       isActive:
         payload.isActive === undefined
           ? true
-          : payload.isActive === "true" || payload.isActive === true,
+          : parseBoolean(payload.isActive),
     });
     await category.save();
 
@@ -263,9 +227,9 @@ const updateCategory = async (req, res, next) => {
 
     if (order !== undefined) updateData.order = Number(order);
     if (isActive !== undefined)
-      updateData.isActive = isActive === "true" || isActive === true;
+      updateData.isActive = parseBoolean(isActive);
     if (isFeatured !== undefined)
-      updateData.isFeatured = isFeatured === "true" || isFeatured === true;
+      updateData.isFeatured = parseBoolean(isFeatured);
 
     if (req.files) {
       if (req.files.icon && req.files.icon.length > 0) {

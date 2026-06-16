@@ -12,27 +12,13 @@ const {
   resolveCategoryId,
   resolveSubCategoryId,
 } = require("../../utils/subgenreMatcher");
+const { getIdString } = require("../../utils/categoryView");
+const { parseMaybeJson, parseBoolean } = require("../../utils/parsing");
 
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
   if (value === undefined || value === null) return "";
   return String(value).trim();
-};
-
-const parseMaybeJson = (value) => {
-  if (value === undefined || value === null || value === "") {
-    return undefined;
-  }
-
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch (error) {
-      return value;
-    }
-  }
-
-  return value;
 };
 
 const normalizePayload = (payload = {}) => {
@@ -45,7 +31,7 @@ const normalizePayload = (payload = {}) => {
     payload.publisher ?? payload.publish ?? payload.publisherId;
 
   if (payload.isTop !== undefined) {
-    normalized.isTop = payload.isTop === "true" || payload.isTop === true;
+    normalized.isTop = parseBoolean(payload.isTop);
   }
 
   return normalized;
@@ -53,12 +39,6 @@ const normalizePayload = (payload = {}) => {
 
 const resolvePublisherId = (payload = {}) =>
   payload.publisher ?? payload.publish ?? payload.publisherId ?? null;
-
-const getIdString = (value) => {
-  if (!value) return null;
-  if (value._id) return value._id.toString();
-  return value.toString();
-};
 
 const validatePublisher = async (publisherId) => {
   if (!publisherId) {

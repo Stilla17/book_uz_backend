@@ -1,15 +1,4 @@
-const parseMaybeJson = (value) => {
-  if (typeof value !== "string") return value;
-
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-
-  try {
-    return JSON.parse(trimmed);
-  } catch (error) {
-    return value;
-  }
-};
+const { parseMaybeJson } = require("./parsing");
 
 const normalizeComparable = (value) => {
   if (value === undefined || value === null) return "";
@@ -60,7 +49,7 @@ const addValue = (values, value) => {
 
 const getIdentifierValues = (value) => {
   const values = new Set();
-  addValue(values, parseMaybeJson(value));
+  addValue(values, parseMaybeJson(value, ""));
   return values;
 };
 
@@ -75,7 +64,7 @@ const findSubgenreByIdentifier = (subgenres = [], identifier) => {
 };
 
 const resolveCategoryId = (payload = {}) => {
-  const category = parseMaybeJson(payload.category ?? payload.categoryId);
+  const category = parseMaybeJson(payload.category ?? payload.categoryId, "");
 
   if (category && typeof category === "object") {
     return category._id ?? category.id ?? category.value ?? null;
@@ -87,6 +76,7 @@ const resolveCategoryId = (payload = {}) => {
 const resolveSubCategoryId = (payload = {}) => {
   const subCategory = parseMaybeJson(
     payload.subCategoryId ?? payload.subgenreId ?? payload.subgenre,
+    "",
   );
 
   if (subCategory && typeof subCategory === "object") {

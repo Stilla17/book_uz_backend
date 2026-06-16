@@ -1,79 +1,26 @@
 const axios = require("axios");
 const Product = require("../models/Product");
-
-const MOYSKLAD_API_URL = process.env.MOYSKLAD_API_URL;
 const TOKEN = process.env.MOYSKLAD_API_KEY;
+const {
+  delay,
+  getMoyskladBaseUrl,
+  moyskladHeaders,
+  cleanBarcode,
+  getMoyskladBarcode,
+  getAxiosStatus,
+  logMoyskladError,
+  requestWithRetry,
+} = require("./moyskladClient");
 
-// API bloklanmasligi uchun kutish funksiyasi
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
-const RETRY_DELAYS_MS = [5000, 15000, 30000];
 const FIVE_HOURS_IN_MS = 5 * 60 * 60 * 1000;
 
 let isSyncing = false;
 
-const getMoyskladBaseUrl = () => {
-  if (!MOYSKLAD_API_URL) {
-    return "https://api.moysklad.ru/api/remap/1.2";
-  }
-
-  const marker = "/api/remap/1.2";
-  const markerIndex = MOYSKLAD_API_URL.indexOf(marker);
-
-  if (markerIndex === -1) {
-    return MOYSKLAD_API_URL.replace(/\/entity\/assortment.*$/, "");
-  }
-
-  return MOYSKLAD_API_URL.slice(0, markerIndex + marker.length);
-};
-
 const MOYSKLAD_BASE_URL = getMoyskladBaseUrl();
 const MOYSKLAD_ASSORTMENT_URL = `${MOYSKLAD_BASE_URL}/entity/assortment`;
-
-const moyskladHeaders = {
-  Authorization: `Bearer ${TOKEN}`,
-  "Cache-Control": "no-cache",
-};
-
-const cleanBarcode = (barcode) => barcode?.toString().replace(/\D/g, "") || "";
-
-const getMoyskladBarcode = (msProduct) => {
-  const barcodeObj = msProduct.barcodes && msProduct.barcodes[0];
-  return barcodeObj ? Object.values(barcodeObj)[0] : null;
-};
-
-const getAxiosStatus = (error) => error.response?.status;
-
-const logMoyskladError = (label, error) => {
-  const status = getAxiosStatus(error);
-  const message = error.response?.data?.errors?.[0]?.error || error.message;
-
-  console.error(`${label}: ${status || "NO_STATUS"} - ${message}`);
-};
-
-const requestWithRetry = async (requestFn, label) => {
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
-    try {
-      return await requestFn();
-    } catch (error) {
-      const status = getAxiosStatus(error);
-      const canRetry = status === 429 && attempt < RETRY_DELAYS_MS.length;
-
-      if (!canRetry) {
-        throw error;
-      }
-
-      const waitMs = RETRY_DELAYS_MS[attempt];
-      console.warn(
-        `${label}: MoySklad limitiga urildi, ${Math.round(waitMs / 1000)} sekund kutamiz...`,
-      );
-      await delay(waitMs);
-    }
-  }
-
-  return null;
-};
+const headers = moyskladHeaders(TOKEN);
 
 const buildBranchStocks = (stockByStore, syncedAt) =>
   (stockByStore || []).map((storeStock) => {
@@ -98,7 +45,7 @@ const fetchBranchStocks = async (productHref) => {
   const response = await requestWithRetry(
     () =>
       axios.get(`${MOYSKLAD_BASE_URL}/report/stock/bystore`, {
-        headers: moyskladHeaders,
+        headers,
         timeout: 30000,
         params: {
           filter: `product=${productHref}`,
@@ -114,7 +61,7 @@ const fetchAssortmentChunk = async (filterString) =>
   requestWithRetry(
     () =>
       axios.get(MOYSKLAD_ASSORTMENT_URL, {
-        headers: moyskladHeaders,
+        headers,
         timeout: 30000,
         params: { filter: filterString },
       }),

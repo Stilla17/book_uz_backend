@@ -4,23 +4,13 @@ const apiResponse = require('../../utils/apiResponse');
 const slugify = require('../../utils/slugify');
 const { getPaginationParams, buildPagination } = require('../../utils/pagination');
 const { buildSearchRegex, normalizeSearchText } = require('../../utils/searchRegex');
-
-const parseJsonField = (value, fallback) => {
-  if (value === undefined || value === null || value === '') return fallback;
-  if (typeof value === 'object') return value;
-  return JSON.parse(value);
-};
-
-const parseBoolean = (value, fallback = false) => {
-  if (value === undefined) return fallback;
-  return value === true || value === 'true';
-};
+const { parseMaybeJson, parseBoolean } = require('../../utils/parsing');
 
 const parseTags = (value) => {
   if (!value) return [];
   const parsed =
     typeof value === 'string' && value.trim().startsWith('[')
-      ? parseJsonField(value, [])
+      ? parseMaybeJson(value, [], { returnOriginalOnError: false })
       : value;
   if (Array.isArray(parsed)) return parsed.filter(Boolean);
   if (typeof parsed !== 'string') return [];
@@ -98,8 +88,8 @@ const getNewsById = async (req, res, next) => {
 
 const createNews = async (req, res, next) => {
   try {
-    const title = parseJsonField(req.body.title, {});
-    const description = parseJsonField(req.body.description, {});
+    const title = parseMaybeJson(req.body.title, {}, { returnOriginalOnError: false });
+    const description = parseMaybeJson(req.body.description, {}, { returnOriginalOnError: false });
 
     if (!ensureLocalizedRequired(title, 'title', res)) return;
     if (!ensureLocalizedRequired(description, 'description', res)) return;
@@ -118,7 +108,7 @@ const createNews = async (req, res, next) => {
     const news = await News.create({
       title,
       slug,
-      excerpt: parseJsonField(req.body.excerpt, {}),
+      excerpt: parseMaybeJson(req.body.excerpt, {}, { returnOriginalOnError: false }),
       description,
       image,
       tags: parseTags(req.body.tags),
@@ -144,7 +134,7 @@ const updateNews = async (req, res, next) => {
     const updateData = {};
 
     if (req.body.title) {
-      const title = parseJsonField(req.body.title, {});
+      const title = parseMaybeJson(req.body.title, {}, { returnOriginalOnError: false });
       if (!ensureLocalizedRequired(title, 'title', res)) return;
       updateData.title = title;
       updateData.slug = req.body.slug || slugify(title.uz);
@@ -159,9 +149,9 @@ const updateNews = async (req, res, next) => {
       }
     }
 
-    if (req.body.excerpt) updateData.excerpt = parseJsonField(req.body.excerpt, {});
+    if (req.body.excerpt) updateData.excerpt = parseMaybeJson(req.body.excerpt, {}, { returnOriginalOnError: false });
     if (req.body.description) {
-      const description = parseJsonField(req.body.description, {});
+      const description = parseMaybeJson(req.body.description, {}, { returnOriginalOnError: false });
       if (!ensureLocalizedRequired(description, 'description', res)) return;
       updateData.description = description;
     }
