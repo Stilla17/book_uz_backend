@@ -12,6 +12,9 @@ router.post("/register", authController.register);
 // 2. Tizimga kirish: POST /api/v1/auth/login
 router.post("/login", authController.login);
 
+// Telefon raqam va ism familya orqali OTPsiz kirish: POST /api/v1/auth/phone/login
+router.post("/phone/login", authController.loginWithPhone);
+
 // Telefon raqam orqali OTP yuborish: POST /api/v1/auth/phone/send-otp
 router.post("/phone/send-otp", authController.sendPhoneOtp);
 

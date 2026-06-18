@@ -55,6 +55,27 @@ const formatRef = (value, refMap, titleField = "name") => {
   return id ? { id } : null;
 };
 
+const getLocalizedText = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return value.uz || value.ru || value.en || "";
+};
+
+const topBooksPattern = /\b(bestseller|best seller|top|ommabop|mashhur|sotuv|eng kop|eng ko'p|reyting)\b/i;
+
+const isTopBooksQuery = (query) => {
+  const normalized = normalizeSearchText(query);
+  return topBooksPattern.test(normalized);
+};
+
+const isOnlyTopBooksQuery = (query) => {
+  const normalized = normalizeSearchText(query);
+  return !normalized
+    .replace(topBooksPattern, "")
+    .replace(/\b(kitob|kitoblar|books)\b/gi, "")
+    .trim();
+};
+
 const formatProductForAI = (product, refs) => ({
   id: product._id.toString(),
   title: product.title,
@@ -84,6 +105,45 @@ const searchBooks = async ({
 
   if (normalizedQuery) {
     const regex = buildSearchRegex(normalizedQuery);
+    const [authors, publishers, categories] = await Promise.all([
+      Author.find({ $or: [{ name: regex }, { slug: regex }] })
+        .select("_id")
+        .limit(20)
+        .lean(),
+      Publisher.find({ $or: [{ name: regex }, { slug: regex }] })
+        .select("_id")
+        .limit(20)
+        .lean(),
+      Category.find({
+        $or: [
+          { slug: regex },
+          { "title.uz": regex },
+          { "title.ru": regex },
+          { "title.en": regex },
+          { "subgenres.slug": regex },
+          { "subgenres.title.uz": regex },
+          { "subgenres.title.ru": regex },
+          { "subgenres.title.en": regex },
+        ],
+      })
+        .select("_id subgenres")
+        .limit(20)
+        .lean(),
+    ]);
+
+    const authorIds = authors.map((author) => author._id);
+    const publisherIds = publishers.map((publisher) => publisher._id);
+    const categoryIds = categories.map((category) => category._id);
+    const subgenreIds = categories.flatMap((category) =>
+      (category.subgenres || [])
+        .filter((subgenre) => {
+          const title = normalizeSearchText(getLocalizedText(subgenre.title));
+          const slug = normalizeSearchText(subgenre.slug);
+          return title.includes(normalizedQuery) || slug.includes(normalizedQuery);
+        })
+        .map((subgenre) => subgenre._id),
+    );
+
     filter.$or = [
       { slug: regex },
       { "title.uz": regex },
@@ -93,6 +153,18 @@ const searchBooks = async ({
       { "description.ru": regex },
       { "description.en": regex },
     ];
+
+    if (authorIds.length) filter.$or.push({ author: { $in: authorIds } });
+    if (publisherIds.length) filter.$or.push({ publisher: { $in: publisherIds } });
+    if (categoryIds.length) filter.$or.push({ category: { $in: categoryIds } });
+    if (subgenreIds.length) filter.$or.push({ subCategoryId: { $in: subgenreIds } });
+  }
+
+  if (isTopBooksQuery(query)) {
+    if (isOnlyTopBooksQuery(query)) {
+      delete filter.$or;
+    }
+    filter.isTop = true;
   }
 
   if (language) {

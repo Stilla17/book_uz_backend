@@ -90,6 +90,30 @@ const sendPhoneOtp = async (req, res, next) => {
   }
 };
 
+// Telefon raqam va ism familya orqali OTPsiz tizimga kirish
+const loginWithPhone = async (req, res, next) => {
+  try {
+    const { phone, name, wishlist, wishlistProductIds, productIds } = req.body;
+
+    const { user, accessToken, refreshToken } = await authService.loginWithPhone(
+      {
+        phone,
+        name,
+        wishlist: wishlistProductIds || productIds || wishlist,
+      },
+    );
+
+    res.cookie("refreshToken", refreshToken, cookieOptions);
+
+    apiResponse(res, 200, true, "Telefon raqam orqali tizimga kirildi", {
+      user,
+      accessToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Telefon raqam orqali OTP tekshirish va tizimga kirish
 const verifyPhoneOtp = async (req, res, next) => {
   try {
@@ -175,5 +199,6 @@ module.exports = {
   refresh,
   logout,
   sendPhoneOtp,
+  loginWithPhone,
   verifyPhoneOtp,
 };

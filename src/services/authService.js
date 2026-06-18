@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const OTP = require("../models/OTP");
 const { isValidPhone } = require("../utils/validator");
+const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const sendEskizSms = require("../utils/sendEskizSms");
 
 const normalizeWishlistProductIds = (wishlist = []) => {
@@ -111,10 +112,12 @@ class AuthService {
     if (!isValidPhone(phone)) {
       throw new Error("Telefon raqam formati noto'g'ri. Masalan +998901234567");
     }
+    const phoneDigits = normalizePhone(phone);
     let user = await User.findOne({ phone });
     if (!user) {
       user = await User.create({
         name: name || "Foydalanuvchi",
+        email: `phone-${phoneDigits}@bookuz.local`,
         phone,
         isVerified: false,
       });
@@ -128,6 +131,63 @@ class AuthService {
 
     console.log(`Phone OTP for ${phone}: ${otp}`);
     return { phone };
+  }
+
+  async loginWithPhone({ phone, name, wishlist }) {
+    const formattedPhone = formatUzPhone(phone);
+    const phoneDigits = normalizePhone(formattedPhone);
+    const localPhone = phoneDigits.startsWith("998")
+      ? phoneDigits.slice(3)
+      : phoneDigits;
+    const phoneVariants = [
+      formattedPhone,
+      phoneDigits,
+      localPhone,
+      `+${phoneDigits}`,
+      `+998${localPhone}`,
+    ].filter(Boolean);
+
+    if (!isValidPhone(formattedPhone)) {
+      throw new Error("Telefon raqam formati noto'g'ri. Masalan +998901234567");
+    }
+
+    const normalizedName = name?.toString().trim();
+    if (!normalizedName || normalizedName.length < 2) {
+      throw new Error("Ism familya kamida 2 ta belgidan iborat bo'lishi kerak");
+    }
+
+    let user = await User.findOne({ phone: { $in: phoneVariants } });
+
+    if (user) {
+      user.name = normalizedName;
+      user.phone = formattedPhone;
+      user.isVerified = true;
+    } else {
+      try {
+        user = await User.create({
+          name: normalizedName,
+          email: `phone-${phoneDigits}@bookuz.local`,
+          phone: formattedPhone,
+          isVerified: true,
+        });
+      } catch (error) {
+        if (error.code !== 11000) throw error;
+
+        user = await User.findOne({ phone: { $in: phoneVariants } });
+        if (!user) throw error;
+
+        user.name = normalizedName;
+        user.phone = formattedPhone;
+        user.isVerified = true;
+      }
+    }
+
+    const tokens = this.generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
+    await this.mergeWishlist(user, wishlist);
+    await user.save();
+
+    return { user: sanitizeUser(user), ...tokens };
   }
 
   async verifyPhoneOtp({ phone, otp, wishlist }) {

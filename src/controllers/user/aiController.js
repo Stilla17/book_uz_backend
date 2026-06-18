@@ -20,6 +20,37 @@ const getLocalizedText = (value) => {
   return value.uz || value.ru || value.en || "";
 };
 
+const sanitizeHistory = (history) => {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .filter(
+      (item) =>
+        ["assistant", "user"].includes(item?.role) &&
+        typeof item?.text === "string" &&
+        item.text.trim(),
+    )
+    .slice(-8)
+    .map((item) => ({
+      role: item.role,
+      text: item.text.trim().slice(0, 600),
+    }));
+};
+
+const buildChatInput = (message, history) => {
+  const chatHistory = sanitizeHistory(history);
+
+  if (!chatHistory.length) {
+    return message.trim();
+  }
+
+  const historyText = chatHistory
+    .map((item) => `${item.role === "user" ? "Mijoz" : "AI"}: ${item.text}`)
+    .join("\n");
+
+  return `Suhbat tarixi:\n${historyText}\n\nMijozning hozirgi xabari: ${message.trim()}`;
+};
+
 const formatBooksAnswer = (books) => {
   if (!books.length) {
     return "Hozircha mos kitob topilmadi. Muallif, janr, til yoki narx bo'yicha biroz aniqroq yozib bera olasizmi?";
@@ -43,6 +74,18 @@ const formatBooksAnswer = (books) => {
 
   return `Sizga mos kitoblar:\n\n${lines.join("\n")}\n\nYana aniqroq tavsiya kerak bo'lsa, janr yoki muallif nomini yozing.`;
 };
+
+const formatAiBookPayload = (books) =>
+  books.slice(0, 8).map((book) => ({
+    title: getLocalizedText(book.title) || "Nomsiz kitob",
+    author: book.author?.name || "",
+    category: getLocalizedText(book.category?.title) || book.category?.name || "",
+    price: book.discountPrice || book.price || null,
+    stock: Number(book.stock) || 0,
+    language: book.language,
+    ratingAvg: book.ratingAvg,
+    link: book.slug ? `${process.env.CLIENT_URL}/book/${book.slug}` : "",
+  }));
 
 const bookSearchTool = {
   type: "function",
@@ -98,13 +141,14 @@ const runToolCall = async (toolCall) => {
 
 exports.chat = async (req, res, next) => {
   try {
-    const { message } = req.body;
+    const { message, history } = req.body;
 
     if (typeof message !== "string" || !message.trim()) {
       return apiResponse(res, 400, false, "Xabar kiritilmadi");
     }
 
     const openai = getOpenAIClient();
+    const input = buildChatInput(message, history);
 
     const firstResponse = await openai.responses.create({
       model: "gpt-5-mini",
@@ -118,9 +162,11 @@ exports.chat = async (req, res, next) => {
           - Faqat tool qaytargan kitoblarni bor deb ayting.
           - Bazada topilmagan kitobni bor deb o'ylab topmang.
           - Agar kitob topilmasa, mijozdan janr, muallif, til yoki narx bo'yicha aniqlashtirish so'rang.
-          - Har bir tavsiyada nom, narx, mavjudlik va slug/link uchun slug ko'rsating.
+          - Har bir tavsiyada nom, narx, mavjudlik va link ko'rsating.
+          - Oldingi suhbat tarixidan foydalaning: mijoz "yana", "shunga o'xshash", "arzonroq" desa, avvalgi mavzuni hisobga oling.
+          - Javobni qisqa, foydali va savdo maslahatchisidek yozing.
           - To'lov, parol, token, admin yoki maxfiy ma'lumotlar haqida javob bermang.`.trim(),
-      input: message.trim(),
+      input,
       tools: [bookSearchTool],
     });
 
@@ -143,9 +189,41 @@ exports.chat = async (req, res, next) => {
       }
     }
 
-    return apiResponse(res, 200, true, "AI javobi", {
-      answer: formatBooksAnswer(books),
-    });
+    const uniqueBooks = [
+      ...new Map(books.map((book) => [book.id, book])).values(),
+    ];
+
+    if (!uniqueBooks.length) {
+      return apiResponse(res, 200, true, "AI javobi", {
+        answer: formatBooksAnswer([]),
+      });
+    }
+
+    try {
+      const finalResponse = await openai.responses.create({
+        model: "gpt-5-mini",
+        instructions: `Siz Book.uz do'konining kitob maslahatchisisiz.
+          Faqat berilgan JSON ichidagi kitoblarni tavsiya qiling.
+          Mijoz yozgan tilda javob bering.
+          Javob 5 ta kitobdan oshmasin.
+          Har bir kitobda nom, muallif, narx, mavjudlik va link bo'lsin.
+          Kitoblar orasidan mijoz so'roviga eng moslarini tanlab, nega mosligini 1 qisqa jumlada ayting.
+          Agar variantlar to'liq mos bo'lmasa, oxirida bitta aniqlashtiruvchi savol bering.`.trim(),
+        input: `${input}\n\nBook.uz bazasidan topilgan kitoblar JSON:\n${JSON.stringify(
+          formatAiBookPayload(uniqueBooks),
+        )}`,
+      });
+
+      return apiResponse(res, 200, true, "AI javobi", {
+        answer: finalResponse.output_text || formatBooksAnswer(uniqueBooks),
+      });
+    } catch (formatError) {
+      console.warn("AI javobini formatlashda xatolik:", formatError.message);
+
+      return apiResponse(res, 200, true, "AI javobi", {
+        answer: formatBooksAnswer(uniqueBooks),
+      });
+    }
   } catch (error) {
     if (error.code === "insufficient_quota") {
       return apiResponse(
