@@ -1,6 +1,7 @@
 const Product = require('../../models/Product');
 const Category = require('../../models/Category');
 const Publisher = require('../../models/Publisher');
+const Author = require('../../models/Author');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 const { buildSearchPattern, buildSearchRegex } = require('../../utils/searchRegex');
@@ -45,6 +46,18 @@ const getWishlistSet = (req) =>
   new Set((req.user?.wishlist || []).map((id) => id.toString()));
 
 const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ''));
+
+const parseList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap(parseList);
+  }
+
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
 
 const getLocalizedValues = (field) => {
   if (!field) return [];
@@ -114,6 +127,41 @@ const findSubgenreByParam = async (value) => {
   return null;
 };
 
+const buildRelationFilters = async (Model, values) => {
+  const objectIds = values.filter(isObjectId);
+  const nameValues = values.filter((value) => !isObjectId(value));
+  const relationQuery = [];
+
+  if (objectIds.length) {
+    relationQuery.push({ _id: { $in: objectIds } });
+  }
+
+  if (nameValues.length) {
+    relationQuery.push(
+      ...nameValues.map((value) => ({
+        $or: [
+          { slug: value },
+          { name: buildSearchRegex(value, { exact: true }) },
+        ],
+      })),
+    );
+  }
+
+  if (!relationQuery.length) return { ids: objectIds, bookIds: [] };
+
+  const relations = await Model.find({ $or: relationQuery }).select('_id books').lean();
+  const ids = [...new Set([...objectIds, ...relations.map((item) => item._id.toString())])];
+  const bookIds = [
+    ...new Set(
+      relations
+        .flatMap((item) => item.books || [])
+        .map((bookId) => bookId.toString()),
+    ),
+  ];
+
+  return { ids, bookIds };
+};
+
 const withWishlistField = (product, wishlistSet) => {
   const productObject = withDisplayFields(product);
 
@@ -149,48 +197,103 @@ exports.getAllProducts = async (req, res, next) => {
       });
     }
 
-    if (category) {
-      const resolvedCategory = await findCategoryByParam(category);
-      const categoryFilters = [
-        { "category.id": category },
-        { "category._id": category },
-        { "category.name": buildSearchRegex(category) },
-      ];
+    const genreFilters = [];
+    const categoryList = parseList(category);
+    const selectedSubgenre = subCategoryId || subgenreId || subgenre;
+    const subgenreList = parseList(selectedSubgenre);
 
-      if (isObjectId(category)) {
-        categoryFilters.unshift({ category });
+    for (const categoryItem of categoryList) {
+      const resolvedCategory = await findCategoryByParam(categoryItem);
+
+      genreFilters.push(
+        { "category.id": categoryItem },
+        { "category._id": categoryItem },
+        { "category.name": buildSearchRegex(categoryItem) },
+      );
+
+      if (isObjectId(categoryItem)) {
+        genreFilters.unshift({ category: categoryItem });
       }
 
       if (resolvedCategory) {
         const categoryNames = getLocalizedValues(resolvedCategory.title || resolvedCategory.name);
-        categoryFilters.push(...buildNameFilters(categoryNames));
+        genreFilters.push(...buildNameFilters(categoryNames));
 
         const subgenreBookIds = (resolvedCategory.subgenres || [])
           .flatMap((subgenre) => subgenre.books || [])
           .filter(Boolean);
 
         if (subgenreBookIds.length) {
-          categoryFilters.push({ _id: { $in: subgenreBookIds } });
+          genreFilters.push({ _id: { $in: subgenreBookIds } });
         }
       }
-
-      andFilters.push({
-        $or: categoryFilters,
-      });
     }
-    if (author) query.author = author;
+
+    for (const subgenreItem of subgenreList) {
+      if (isObjectId(subgenreItem)) {
+        genreFilters.push({ subCategoryId: subgenreItem });
+        continue;
+      }
+
+      const resolvedSubgenre = await findSubgenreByParam(subgenreItem);
+      genreFilters.push(
+        { "category.id": subgenreItem },
+        { "category._id": subgenreItem },
+        { "category.name": buildSearchRegex(subgenreItem) },
+      );
+
+      if (resolvedSubgenre) {
+        const subgenreNames = getLocalizedValues(resolvedSubgenre.subgenre.title || resolvedSubgenre.subgenre.name);
+        genreFilters.push(...buildNameFilters(subgenreNames));
+
+        if (resolvedSubgenre.subgenre._id) {
+          genreFilters.push({ subCategoryId: resolvedSubgenre.subgenre._id });
+        }
+
+        if (resolvedSubgenre.subgenre.books?.length) {
+          genreFilters.push({ _id: { $in: resolvedSubgenre.subgenre.books } });
+        }
+      }
+    }
+
+    if (genreFilters.length) {
+      andFilters.push({ $or: genreFilters });
+    }
+
+    const authorList = parseList(author);
+    if (authorList.length) {
+      const authorFilter = await buildRelationFilters(Author, authorList);
+      const authorOrFilters = [];
+
+      if (authorFilter.ids.length) {
+        authorOrFilters.push({ author: { $in: authorFilter.ids } });
+      }
+
+      if (authorFilter.bookIds.length) {
+        authorOrFilters.push({ _id: { $in: authorFilter.bookIds } });
+      }
+
+      if (authorOrFilters.length) {
+        andFilters.push({ $or: authorOrFilters });
+      } else {
+        andFilters.push({ _id: { $in: [] } });
+      }
+    }
+
     const selectedPublisher = publisher || publish;
     if (selectedPublisher) {
+      const publisherList = parseList(selectedPublisher);
       const defaultPublisher = await Publisher.findOne().lean();
       const publisherCount = defaultPublisher ? await Publisher.countDocuments() : 0;
       const matchesDefaultPublisher =
+        publisherList.length === 1 &&
         publisherCount === 1 &&
         defaultPublisher &&
         [
           defaultPublisher._id.toString(),
           defaultPublisher.slug,
           defaultPublisher.name,
-        ].includes(selectedPublisher);
+        ].includes(publisherList[0]);
 
       if (matchesDefaultPublisher) {
         andFilters.push({
@@ -200,43 +303,27 @@ exports.getAllProducts = async (req, res, next) => {
             { publisher: null },
           ],
         });
-      } else if (/^[0-9a-fA-F]{24}$/.test(selectedPublisher)) {
-        query.publisher = selectedPublisher;
       } else {
-        andFilters.push({ "publisher.name": buildSearchRegex(selectedPublisher) });
+        const publisherFilter = await buildRelationFilters(Publisher, publisherList);
+        const publisherOrFilters = [];
+
+        if (publisherFilter.ids.length) {
+          publisherOrFilters.push({ publisher: { $in: publisherFilter.ids } });
+        }
+
+        if (publisherFilter.bookIds.length) {
+          publisherOrFilters.push({ _id: { $in: publisherFilter.bookIds } });
+        }
+
+        if (publisherOrFilters.length) {
+          andFilters.push({ $or: publisherOrFilters });
+        } else {
+          andFilters.push({ _id: { $in: [] } });
+        }
       }
     }
     if (language) query.language = language;
     if (contentLanguage) query.contentLanguage = contentLanguage;
-
-    const selectedSubgenre = subCategoryId || subgenreId || subgenre;
-    if (selectedSubgenre) {
-      if (isObjectId(selectedSubgenre)) {
-        query.subCategoryId = selectedSubgenre;
-      } else {
-        const resolvedSubgenre = await findSubgenreByParam(selectedSubgenre);
-        const subgenreFilters = [
-          { "category.id": selectedSubgenre },
-          { "category._id": selectedSubgenre },
-          { "category.name": buildSearchRegex(selectedSubgenre) },
-        ];
-
-        if (resolvedSubgenre) {
-          const subgenreNames = getLocalizedValues(resolvedSubgenre.subgenre.title || resolvedSubgenre.subgenre.name);
-          subgenreFilters.push(...buildNameFilters(subgenreNames));
-
-          if (resolvedSubgenre.subgenre._id) {
-            subgenreFilters.push({ subCategoryId: resolvedSubgenre.subgenre._id });
-          }
-
-          if (resolvedSubgenre.subgenre.books?.length) {
-            subgenreFilters.push({ _id: { $in: resolvedSubgenre.subgenre.books } });
-          }
-        }
-
-        andFilters.push({ $or: subgenreFilters });
-      }
-    }
 
     if (andFilters.length) {
       query.$and = andFilters;
@@ -354,8 +441,8 @@ exports.getProductById = async (req, res, next) => {
 
     const product = await Product.findOne(query)
       .populate('category', CATEGORY_SELECT)
-      .populate('author')
-      .populate('publisher');
+      .populate('author', 'name slug image')
+      .populate('publisher', 'name slug image');
     
     if (!product) {
       return apiResponse(res, 404, false, "Mahsulot topilmadi");

@@ -1,8 +1,8 @@
-const Author = require('../../models/Author');
-const Product = require('../../models/Product');
-const apiResponse = require('../../utils/apiResponse');
-const hydrateProductRelations = require('../../utils/hydrateProductRelations');
-const { buildSearchRegex } = require('../../utils/searchRegex');
+const Author = require("../../models/Author");
+const Product = require("../../models/Product");
+const apiResponse = require("../../utils/apiResponse");
+const hydrateProductRelations = require("../../utils/hydrateProductRelations");
+const { buildSearchRegex } = require("../../utils/searchRegex");
 
 const buildAuthorQuery = (idOrSlug) => {
   if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
@@ -14,15 +14,15 @@ const buildAuthorQuery = (idOrSlug) => {
 
 const getSortOption = (sort) => {
   switch (sort) {
-    case 'price_asc':
-    case 'price-asc':
+    case "price_asc":
+    case "price-asc":
       return { price: 1 };
-    case 'price_desc':
-    case 'price-desc':
+    case "price_desc":
+    case "price-desc":
       return { price: -1 };
-    case 'rating':
+    case "rating":
       return { ratingAvg: -1 };
-    case 'newest':
+    case "newest":
     default:
       return { createdAt: -1 };
   }
@@ -30,8 +30,9 @@ const getSortOption = (sort) => {
 
 const getAllAuthors = async (req, res, next) => {
   try {
-    const { search, page = 1, limit = 50 } = req.query;
-    const normalizedLimit = Math.min(Number(limit) || 50, 100);
+    const { search, page = 1, limit = 50, minimal } = req.query;
+    const isMinimal = minimal === "true";
+    const normalizedLimit = Math.min(Number(limit) || 50, isMinimal ? 1000 : 100);
     const skip = (Number(page) - 1) * normalizedLimit;
 
     const filter = {};
@@ -39,14 +40,31 @@ const getAllAuthors = async (req, res, next) => {
       filter.name = buildSearchRegex(search);
     }
 
+    const authorQuery = Author.find(filter)
+      .sort("name")
+      .skip(skip)
+      .limit(normalizedLimit);
+
+    if (isMinimal) {
+      authorQuery.select("name slug image");
+    }
+
     const [authors, total] = await Promise.all([
-      Author.find(filter)
-        .sort('name')
-        .skip(skip)
-        .limit(normalizedLimit)
-        .lean(),
-      Author.countDocuments(filter)
+      authorQuery.lean(),
+      Author.countDocuments(filter),
     ]);
+
+    if (isMinimal) {
+      return apiResponse(res, 200, true, "Mualliflar ro'yxati", {
+        authors,
+        pagination: {
+          total,
+          page: Number(page),
+          pages: Math.ceil(total / normalizedLimit),
+          limit: normalizedLimit,
+        },
+      });
+    }
 
     const authorsWithBookCount = await Promise.all(
       authors.map(async (author) => {
@@ -54,15 +72,15 @@ const getAllAuthors = async (req, res, next) => {
         const booksCount = await Product.countDocuments({
           $or: [
             { author: author._id },
-            ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : [])
-          ]
+            ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : []),
+          ],
         });
 
         return {
           ...author,
-          booksCount
+          booksCount,
         };
-      })
+      }),
     );
 
     return apiResponse(res, 200, true, "Mualliflar ro'yxati", {
@@ -71,8 +89,8 @@ const getAllAuthors = async (req, res, next) => {
         total,
         page: Number(page),
         pages: Math.ceil(total / normalizedLimit),
-        limit: normalizedLimit
-      }
+        limit: normalizedLimit,
+      },
     });
   } catch (error) {
     next(error);
@@ -91,13 +109,13 @@ const getAuthorByIdOrSlug = async (req, res, next) => {
     const booksCount = await Product.countDocuments({
       $or: [
         { author: author._id },
-        ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : [])
-      ]
+        ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : []),
+      ],
     });
 
     return apiResponse(res, 200, true, "Muallif ma'lumotlari", {
       ...author,
-      booksCount
+      booksCount,
     });
   } catch (error) {
     next(error);
@@ -119,19 +137,19 @@ const getAuthorProducts = async (req, res, next) => {
     const filter = {
       $or: [
         { author: author._id },
-        ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : [])
-      ]
+        ...(authorBookIds.length ? [{ _id: { $in: authorBookIds } }] : []),
+      ],
     };
 
     const [products, total] = await Promise.all([
       Product.find(filter)
-        .populate('category', 'title name subgenres')
-        .populate('author')
-        .populate('publisher')
+        .populate("category", "title name subgenres")
+        .populate("author")
+        .populate("publisher")
         .sort(getSortOption(sort))
         .skip(skip)
         .limit(normalizedLimit),
-      Product.countDocuments(filter)
+      Product.countDocuments(filter),
     ]);
 
     const hydratedProducts = await hydrateProductRelations(products);
@@ -143,8 +161,44 @@ const getAuthorProducts = async (req, res, next) => {
         total,
         page: Number(page),
         pages: Math.ceil(total / normalizedLimit),
-        limit: normalizedLimit
-      }
+        limit: normalizedLimit,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getTopAuthors = async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+
+    const topAuthors = await Author.aggregate([
+      {
+        $addFields: {
+          booksCount: {
+            $size: {
+              $ifNull: ["$books", []],
+            },
+          },
+        },
+      },
+      { $match: { booksCount: { $gt: 0 } } },
+      { $sort: { booksCount: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          image: 1,
+          booksCount: 1,
+        },
+      },
+    ]);
+
+    return apiResponse(res, 200, true, "Top Authors", {
+      authors: topAuthors,
     });
   } catch (error) {
     next(error);
@@ -154,5 +208,6 @@ const getAuthorProducts = async (req, res, next) => {
 module.exports = {
   getAllAuthors,
   getAuthorByIdOrSlug,
-  getAuthorProducts
+  getAuthorProducts,
+  getTopAuthors,
 };

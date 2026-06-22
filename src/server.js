@@ -30,11 +30,11 @@ const { openApiDocument, swaggerHtml } = require("./docs/swagger");
 
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
-  startAmoContactSync();
-  startSyncCron();
-  syncMoyskladProducts();
+  // startAmoContactSync();
+  // startSyncCron();
+  // syncMoyskladProducts();
   // startBirthdaySmsCron();
-  startTopSalesCron();
+  // startTopSalesCron();
 });
 
 const app = express();

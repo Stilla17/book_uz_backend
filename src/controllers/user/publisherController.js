@@ -26,8 +26,9 @@ const getSortOption = (sort) => {
 
 const getAllPublishers = async (req, res, next) => {
   try {
-    const { search, page = 1, limit = 50 } = req.query;
-    const normalizedLimit = Math.min(Number(limit) || 50, 100);
+    const { search, page = 1, limit = 50, minimal } = req.query;
+    const isMinimal = minimal === 'true';
+    const normalizedLimit = Math.min(Number(limit) || 50, isMinimal ? 1000 : 100);
     const skip = (Number(page) - 1) * normalizedLimit;
 
     const filter = {};
@@ -35,14 +36,31 @@ const getAllPublishers = async (req, res, next) => {
       filter.name = buildSearchRegex(search);
     }
 
+    const publisherQuery = Publisher.find(filter)
+      .sort('name')
+      .skip(skip)
+      .limit(normalizedLimit);
+
+    if (isMinimal) {
+      publisherQuery.select('name slug image');
+    }
+
     const [publishers, total] = await Promise.all([
-      Publisher.find(filter)
-        .sort('name')
-        .skip(skip)
-        .limit(normalizedLimit)
-        .lean(),
+      publisherQuery.lean(),
       Publisher.countDocuments(filter)
     ]);
+
+    if (isMinimal) {
+      return apiResponse(res, 200, true, "Nashriyotlar ro'yxati", {
+        publishers,
+        pagination: {
+          total,
+          page: Number(page),
+          pages: Math.ceil(total / normalizedLimit),
+          limit: normalizedLimit
+        }
+      });
+    }
 
     const publishersWithBookCount = await Promise.all(
       publishers.map(async (publisher) => {
