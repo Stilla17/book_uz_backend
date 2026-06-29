@@ -48,15 +48,24 @@ function amountsEqual(clickAmount, orderAmount) {
   return Math.abs(Number(clickAmount) - Number(orderAmount)) < 0.01;
 }
 
+function getMerchantTransId(body) {
+  return String(
+    body.merchant_trans_id ||
+      body.transaction_param ||
+      body.merchant_transaction_id ||
+      "",
+  ).trim();
+}
+
 async function prepare(body) {
   const {
     click_trans_id,
     click_paydoc_id,
-    merchant_trans_id,
     amount,
     service_id,
     action,
   } = body;
+  const merchant_trans_id = getMerchantTransId(body);
 
   if (String(action) !== "0") {
     return errorResponse(
@@ -148,12 +157,12 @@ async function prepare(body) {
 async function complete(body) {
   const {
     click_trans_id,
-    merchant_trans_id,
     merchant_prepare_id,
     amount,
     action,
     error: clickError,
   } = body;
+  const merchant_trans_id = getMerchantTransId(body);
 
   if (String(action) !== "1") {
     return errorResponse(

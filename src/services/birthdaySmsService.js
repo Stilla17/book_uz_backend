@@ -1,34 +1,85 @@
 const AmoContact = require("../models/AmoContact");
+const User = require("../models/User");
 const sendEskizSms = require("../utils/sendEskizSms");
+const { normalizePhone } = require("../utils/phone");
 
 const MESSAGE =
-  "Tugilgan kuningiz muborak! Book.uz sizga bugun 10% chegirma taqdim etadi. Sizni kutamiz.";
+  "Tug\u2018ilgan kuningiz muborak bo\u2018lsin! BOOK.UZ bugungi kun uchun faqat sizga 10% chegirma sovg\u2018a qildi. Imkoniyatdan kun davomida onlayn yoki oflayn foydalanishingiz mumkin. www.book.uz +998712300050";
+const TIMEZONE = "Asia/Tashkent";
 
-async function sendBirthdaySms() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-  const year = now.getFullYear();
+function getTashkentToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
 
-  const contacts = await AmoContact.find({
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function birthdayMatchesTodayExpr(month, day) {
+  return {
+    $eq: [
+      {
+        $dateToString: {
+          format: "%m-%d",
+          date: "$birthDate",
+          timezone: TIMEZONE,
+        },
+      },
+      `${month}-${day}`,
+    ],
+  };
+}
+
+async function sendBirthdaySmsForModel({
+  model,
+  modelName,
+  phoneSelector,
+  phoneFilter,
+  month,
+  day,
+  year,
+  processedPhones,
+}) {
+  const recipients = await model.find({
     birthDate: { $ne: null },
-    phones: { $exists: true, $ne: [] },
+    ...phoneFilter,
     birthdaySmsSentYear: { $ne: year },
-    $expr: {
-      $and: [
-        { $eq: [{ $month: "$birthDate" }, month] },
-        { $eq: [{ $dayOfMonth: "$birthDate" }, day] },
-      ],
-    },
+    $expr: birthdayMatchesTodayExpr(month, day),
   });
 
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
 
-  for (const contact of contacts) {
-    const reserved = await AmoContact.findOneAndUpdate(
+  for (const recipient of recipients) {
+    const phone = phoneSelector(recipient);
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      skipped += 1;
+      continue;
+    }
+
+    if (processedPhones.has(normalizedPhone)) {
+      await model.updateOne(
+        {
+          _id: recipient._id,
+          birthdaySmsSentYear: { $ne: year },
+        },
+        {
+          $set: { birthdaySmsSentYear: year },
+        },
+      );
+      skipped += 1;
+      continue;
+    }
+
+    const reserved = await model.findOneAndUpdate(
       {
-        _id: contact._id,
+        _id: recipient._id,
         birthdaySmsSentYear: { $ne: year },
       },
       {
@@ -38,15 +89,17 @@ async function sendBirthdaySms() {
     );
 
     if (!reserved) continue;
+
     try {
-      await sendEskizSms(contact.phones[0], MESSAGE);
+      await sendEskizSms(phone, MESSAGE);
+      processedPhones.add(normalizedPhone);
       sent += 1;
     } catch (error) {
       failed += 1;
 
-      await AmoContact.updateOne(
+      await model.updateOne(
         {
-          _id: contact._id,
+          _id: recipient._id,
           birthdaySmsSentYear: year,
         },
         {
@@ -55,13 +108,48 @@ async function sendBirthdaySms() {
       );
 
       console.error(
-        `Tug'ilgan kun SMS yuborilmadi: ${contact.phones[0]}`,
+        `Tug'ilgan kun SMS yuborilmadi (${modelName}): ${phone}`,
         error.message,
       );
     }
   }
 
-  console.log(`Tug'ilgan kun SMS: ${sent} yuborildi, ${failed} xato`);
+  return { sent, failed, skipped };
+}
+
+async function sendBirthdaySms() {
+  const { year, month, day } = getTashkentToday();
+  const processedPhones = new Set();
+
+  const amoResult = await sendBirthdaySmsForModel({
+    model: AmoContact,
+    modelName: "AmoContact",
+    phoneSelector: (contact) => contact.phones?.[0],
+    phoneFilter: { phones: { $exists: true, $ne: [] } },
+    month,
+    day,
+    year: Number(year),
+    processedPhones,
+  });
+
+  const userResult = await sendBirthdaySmsForModel({
+    model: User,
+    modelName: "User",
+    phoneSelector: (user) => user.phone,
+    phoneFilter: { phone: { $exists: true, $nin: [null, ""] } },
+    month,
+    day,
+    year: Number(year),
+    processedPhones,
+  });
+
+  const sent = amoResult.sent + userResult.sent;
+  const failed = amoResult.failed + userResult.failed;
+  const skipped = amoResult.skipped + userResult.skipped;
+
+  console.log(
+    `Tug'ilgan kun SMS: ${sent} yuborildi, ${failed} xato, ${skipped} takror/raqamsiz o'tkazildi`,
+  );
 }
 
 module.exports = { sendBirthdaySms };

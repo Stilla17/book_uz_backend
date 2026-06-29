@@ -140,6 +140,7 @@ const endpoints = [
   ["patch", "/admin/publishers/{id}", "Admin Publishers", "Nashriyotni yangilash", true, true],
   ["delete", "/admin/publishers/{id}", "Admin Publishers", "Nashriyotni o'chirish", true],
   ["get", "/admin/users", "Admin Users", "Foydalanuvchilar ro'yxati", true],
+  ["post", "/admin/users", "Admin Users", "Foydalanuvchi yaratish", true],
   ["get", "/admin/users/{id}", "Admin Users", "Foydalanuvchi tafsiloti", true],
   ["patch", "/admin/users/{id}/update", "Admin Users", "Foydalanuvchini yangilash", true],
   ["patch", "/admin/users/{id}/reset-password", "Admin Users", "Foydalanuvchi parolini tiklash", true],

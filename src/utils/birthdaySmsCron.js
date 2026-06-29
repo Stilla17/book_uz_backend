@@ -2,9 +2,9 @@ const cron = require("node-cron");
 const { sendBirthdaySms } = require("../services/birthdaySmsService");
 
 function startBirthdaySmsCron() {
-  // Har kuni Toshkent vaqti bilan 09:00
+  // Har kuni Toshkent vaqti bilan 10:35
   cron.schedule(
-    "0 9 * * *",
+    "35 10 * * *",
     async () => {
       try {
         await sendBirthdaySms();

@@ -53,6 +53,34 @@ const validatePublisher = async (publisherId) => {
   return { publisherId: publisher._id };
 };
 
+const buildProductSearchFilters = async (keyword) => {
+  const searchRegex = buildSearchRegex(keyword);
+  const [authors, publishers] = await Promise.all([
+    Author.find({ name: searchRegex }).select("_id"),
+    Publisher.find({ name: searchRegex }).select("_id"),
+  ]);
+
+  const filters = [
+    { barcode: keyword },
+    { barcode: searchRegex },
+    { "title.uz": searchRegex },
+    { "title.ru": searchRegex },
+    { "title.en": searchRegex },
+  ];
+
+  const authorIds = authors.map((authorItem) => authorItem._id);
+  if (authorIds.length) {
+    filters.push({ author: { $in: authorIds } });
+  }
+
+  const publisherIds = publishers.map((publisherItem) => publisherItem._id);
+  if (publisherIds.length) {
+    filters.push({ publisher: { $in: publisherIds } });
+  }
+
+  return filters;
+};
+
 const ensurePersistentSubgenreIds = async (category) => {
   if (!category?.subgenres?.length) return;
 
@@ -211,13 +239,7 @@ const getAllProducts = async (req, res, next) => {
     const barcodeValue = toTrimmedString(barcode);
 
     if (searchKeyword) {
-      const searchRegex = buildSearchRegex(searchKeyword);
-      filter.$or = [
-        { barcode: searchRegex },
-        { "title.uz": searchRegex },
-        { "title.ru": searchRegex },
-        { "title.en": searchRegex },
-      ];
+      filter.$or = await buildProductSearchFilters(searchKeyword);
     }
 
     if (barcodeValue) {
@@ -585,17 +607,8 @@ const searchProducts = async (req, res) => {
         .json({ success: false, message: "Qidiruv parametri bo'sh" });
     }
 
-    const searchRegex = buildSearchRegex(keyword);
-
-    // Bir vaqtning o'zida ham barcode, ham title bo'yicha qidiramiz
     const products = await Product.find({
-      $or: [
-        { barcode: keyword }, // To'liq mos barcode birinchi navbatda ishlaydi
-        { barcode: searchRegex },
-        { "title.uz": searchRegex },
-        { "title.ru": searchRegex },
-        { "title.en": searchRegex },
-      ],
+      $or: await buildProductSearchFilters(keyword),
     })
       .populate("category", "title name subgenres")
       .populate("author", "name")

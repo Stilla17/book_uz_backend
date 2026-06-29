@@ -32,6 +32,11 @@ const OrderSchema = new mongoose.Schema(
       enum: ["PICKUP", "DELIVERY", "POST"],
       default: "DELIVERY",
     },
+    postDeliveryType: {
+      type: String,
+      enum: ['POST_OFFICE', 'POST_TO_HOME'],
+      required: false
+    },
     paymentType: {
       type: String,
       enum: ["CASH", "CLICK", "UZUM", "PAYME", "XAZNA"],

@@ -16,13 +16,18 @@ function verifyClickSign(body, action) {
     click_trans_id,
     service_id,
     click_paydoc_id,
-    merchant_trans_id,
     merchant_prepare_id,
     amount,
     action: act,
     sign_time,
     sign_string,
   } = body;
+  const merchant_trans_id = String(
+    body.merchant_trans_id ||
+      body.transaction_param ||
+      body.merchant_transaction_id ||
+      "",
+  ).trim();
 
   const secretKey = process.env.CLICK_SECRET_KEY;
   if (!secretKey || !sign_string) return false;

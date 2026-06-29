@@ -4,13 +4,154 @@ const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const Coupon = require("../models/Coupon");
 const Counter = require("../models/Counter");
+const User = require("../models/User");
 const { calculateCouponDiscount } = require("../utils/couponDiscount");
+const { formatUzPhone, normalizePhone } = require("../utils/phone");
+const { isValidPhone } = require("../utils/validator");
+const { getDeliveryFee } = require("./storeSettingsService");
+
+const POST_OFFICE_DELIVERY_FEE = 40000;
+const POST_TO_HOME_DELIVERY_FEE = 60000;
+const POST_DELIVERY_TYPES = ["POST_OFFICE", "POST_TO_HOME"];
+
+const getOrderDeliveryFee = (deliveryType, postDeliveryType, configuredDeliveryFee) => {
+  if (deliveryType === "PICKUP") return 0;
+  if (deliveryType === "POST") {
+    return postDeliveryType === "POST_TO_HOME"
+      ? POST_TO_HOME_DELIVERY_FEE
+      : POST_OFFICE_DELIVERY_FEE;
+  }
+
+  return configuredDeliveryFee;
+};
 
 class OrderService {
   createError(message, statusCode = 400) {
     const error = new Error(message);
     error.statusCode = statusCode;
     return error;
+  }
+
+  buildPhoneVariants(phone) {
+    const formattedPhone = formatUzPhone(phone);
+    const phoneDigits = normalizePhone(formattedPhone);
+    const localPhone = phoneDigits.startsWith("998")
+      ? phoneDigits.slice(3)
+      : phoneDigits;
+
+    return [
+      formattedPhone,
+      phoneDigits,
+      localPhone,
+      `+${phoneDigits}`,
+      localPhone ? `+998${localPhone}` : "",
+    ].filter(Boolean);
+  }
+
+  getCustomerName({ guestName, shippingAddress }) {
+    return (
+      guestName ||
+      shippingAddress?.fullName ||
+      shippingAddress?.name ||
+      "Guest customer"
+    )
+      .toString()
+      .trim();
+  }
+
+  async findOrCreateOrderCustomer({
+    userId,
+    guestName,
+    shippingAddress,
+    session,
+  }) {
+    const formattedPhone = formatUzPhone(shippingAddress.phone);
+    const customerName = this.getCustomerName({ guestName, shippingAddress });
+
+    if (userId) {
+      const user = await User.findById(userId).session(session);
+      if (!user) return null;
+
+      const updates = {};
+      if (customerName && (!user.name || user.name === user.email)) {
+        updates.name = customerName;
+      }
+
+      if (Object.keys(updates).length) {
+        await User.updateOne({ _id: user._id }, { $set: updates }, { session });
+      }
+
+      return user;
+    }
+
+    const phoneVariants = this.buildPhoneVariants(formattedPhone);
+    let user = await User.findOne({ phone: { $in: phoneVariants } }).session(
+      session,
+    );
+
+    if (user) {
+      const updates = {};
+      if (customerName && (!user.name || user.name === user.email)) {
+        updates.name = customerName;
+      }
+
+      if (Object.keys(updates).length) {
+        await User.updateOne({ _id: user._id }, { $set: updates }, { session });
+      }
+
+      return user;
+    }
+
+    return null;
+  }
+
+  async saveCustomerOrderStats({ userId, order, orderItems, session }) {
+    if (!userId) return;
+
+    const purchasedAt = new Date();
+    const purchasedBooks = orderItems.map((item) => ({
+      product: item.product,
+      quantity: item.quantity,
+      purchasedAt,
+      order: order._id,
+    }));
+
+    await User.updateOne(
+      { _id: userId },
+      {
+        $inc: {
+          ordersCount: 1,
+          ordersAmount: order.totalAmount,
+        },
+        $set: {
+          lastOrderAt: purchasedAt,
+        },
+        $push: {
+          purchasedBooks: { $each: purchasedBooks },
+        },
+      },
+      { session },
+    );
+  }
+
+  async getNextOrderNumber(session) {
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      const counter = await Counter.findOneAndUpdate(
+        { _id: "orderNumber" },
+        { $inc: { sequence: 1 } },
+        {
+          new: true,
+          upsert: true,
+          session,
+        },
+      );
+      const orderNumber = counter.sequence;
+      const existingOrder = await Order.exists({ orderNumber }).session(session);
+
+      if (!existingOrder) return orderNumber;
+    }
+
+    throw this.createError("Buyurtma raqamini yaratib bo'lmadi", 500);
   }
 
   async createOrder(userId, orderData) {
@@ -20,14 +161,30 @@ class OrderService {
     const {
       shippingAddress,
       deliveryType,
+      postDeliveryType,
       paymentType,
       guestName,
       description,
       couponCode,
     } = orderData;
+    const normalizedPostDeliveryType =
+      deliveryType === "POST" ? postDeliveryType || "POST_OFFICE" : undefined;
 
     if (!shippingAddress?.phone) {
       throw this.createError("Telefon raqami yuborilishi shart");
+    }
+
+    if (
+      deliveryType === "POST" &&
+      !POST_DELIVERY_TYPES.includes(normalizedPostDeliveryType)
+    ) {
+      throw this.createError("Pochta yetkazib berish turi noto'g'ri");
+    }
+
+    if (!isValidPhone(formatUzPhone(shippingAddress.phone))) {
+      throw this.createError(
+        "Telefon raqam formati noto'g'ri. Masalan +998901234567",
+      );
     }
 
     if (
@@ -45,8 +202,13 @@ class OrderService {
     try {
       let cart = null;
       let sourceItems = [];
+      const useProvidedItems =
+        Array.isArray(orderData.items) &&
+        orderData.items.length > 0 &&
+        (orderData.useProvidedItems || !normalizedUserId);
+      const allowOutOfStock = Boolean(orderData.allowOutOfStock);
 
-      if (normalizedUserId) {
+      if (normalizedUserId && !useProvidedItems) {
         cart = await Cart.findOne({ user: normalizedUserId })
           .session(session)
           .populate("items.product");
@@ -93,7 +255,7 @@ class OrderService {
           !product ||
           !Number.isInteger(quantity) ||
           quantity <= 0 ||
-          product.stock < quantity
+          (!allowOutOfStock && product.stock < quantity)
         ) {
           throw this.createError(
             `Omborda yetarli emas: ${product ? product.title.uz : "Noma'lum mahsulot"}`,
@@ -113,7 +275,9 @@ class OrderService {
         // Ombordan kamaytirish. Product documentni save qilmaymiz, chunki eski importlardan
         // author/category populated object bo'lib qolgan productlar validatsiyada yiqilishi mumkin.
         const stockUpdate = await Product.updateOne(
-          { _id: product._id, stock: { $gte: quantity } },
+          allowOutOfStock
+            ? { _id: product._id }
+            : { _id: product._id, stock: { $gte: quantity } },
           { $inc: { stock: -quantity } },
           { session },
         );
@@ -171,25 +335,28 @@ class OrderService {
         }
       }
 
-      const deliveryFee = deliveryType === "PICKUP" ? 0 : 20000;
-      const totalAmount = subTotal - discount + deliveryFee;
-
-      const counter = await Counter.findOneAndUpdate(
-        { _id: "orderNumber" },
-        { $inc: { sequence: 1 } },
-        {
-          new: true,
-          upsert: true,
-          session,
-        },
+      const configuredDeliveryFee = await getDeliveryFee();
+      const deliveryFee = getOrderDeliveryFee(
+        deliveryType,
+        normalizedPostDeliveryType,
+        configuredDeliveryFee,
       );
-      const orderNumber = counter.sequence;
+      const totalAmount = subTotal - discount + deliveryFee;
+      const orderCustomer = await this.findOrCreateOrderCustomer({
+        userId: normalizedUserId,
+        guestName,
+        shippingAddress,
+        session,
+      });
+      const orderUserId = orderCustomer?._id || normalizedUserId;
+
+      const orderNumber = await this.getNextOrderNumber(session);
 
       // 5. Buyurtma yaratish
       const order = await Order.create(
         [
           {
-            ...(normalizedUserId ? { user: normalizedUserId } : {}),
+            ...(orderUserId ? { user: orderUserId } : {}),
             guestName:
               guestName ||
               shippingAddress?.fullName ||
@@ -203,6 +370,7 @@ class OrderService {
             deliveryFee,
             shippingAddress,
             deliveryType,
+            postDeliveryType: normalizedPostDeliveryType,
             paymentType,
             orderNumber,
             status: "PENDING",
@@ -210,6 +378,13 @@ class OrderService {
         ],
         { session },
       );
+
+      await this.saveCustomerOrderStats({
+        userId: orderUserId,
+        order: order[0],
+        orderItems,
+        session,
+      });
 
       // 6. Savatni tozalash
       if (normalizedUserId) {
@@ -223,7 +398,13 @@ class OrderService {
       return order[0];
     } catch (error) {
       // Xato bo'lsa, barcha o'zgarishlarni bekor qilamiz
-      await session.abortTransaction();
+      if (session.inTransaction()) {
+        try {
+          await session.abortTransaction();
+        } catch (abortError) {
+          console.error("Order transaction abort xatosi:", abortError);
+        }
+      }
       throw error;
     } finally {
       session.endSession();

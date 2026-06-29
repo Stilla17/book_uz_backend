@@ -6,6 +6,20 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, unique: true, sparse: true },
     password: { type: String },
     phone: { type: String, unique: true, sparse: true },
+    birthDate: { type: Date },
+    birthdaySmsSentYear: {
+      type: Number,
+      default: null,
+    },
+    ordersCount: {
+      type: Number,
+      default: 0,
+    },
+    ordersAmount: {
+      type: Number,
+      default: 0,
+    },
+    lastOrderAt: { type: Date },
     role: {
       type: String,
       enum: ["USER", "ADMIN", "SUPERADMIN"],
@@ -21,9 +35,26 @@ const UserSchema = new mongoose.Schema(
         isDefault: { type: Boolean, default: false },
       },
     ],
+    purchasedBooks: [
+      {
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        quantity: { type: Number, default: 1 },
+        purchasedAt: { type: Date, default: Date.now },
+        order: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
+      },
+    ],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     isVerified: { type: Boolean, default: false },
     refreshToken: { type: String },
+    telegramUsername: {
+      type: String,
+      default: "",
+      trim: true,
+      validate: {
+        validator: (value) => !value || /^@[A-Za-z0-9_]{5,32}$/.test(value),
+        message: "Telegram username noto'g'ri",
+      },
+    },
     telegramChatId: {
       type: String,
       default: null,

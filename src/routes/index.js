@@ -22,6 +22,7 @@ const newsRoutes = require("./user/newsRoutes");
 const aiRoutes = require("./user/aiRoutes");
 const topSalesRoutes = require("./user/topSalesRoutes");
 const faqRoutes = require("./user/faqRoutes")
+const settingsRoutes = require("./user/settingsRoutes");
 
 const clickRoutes = require("./click"); // Click.uz uchun marshrutlar
 const paymeRoutes = require("./payme"); // Payme uchun marshrutlar
@@ -43,6 +44,7 @@ const adminCommentRoutes = require("./admin/adminCommentRoutes");
 const adminNewsRoutes = require("./admin/newsRoutes");
 const adminLocationRoutes = require("./admin/adminLocationRoutes");
 const adminFaqRoutes = require("./admin/faqRoutes");
+const adminSettingsRoutes = require("./admin/settingsRoutes");
 
 // Marshrutlarni ulash
 router.use("/auth", authRoutes); // /api/v1/auth/...
@@ -66,6 +68,7 @@ router.use("/news", newsRoutes); // Yangiliklar uchun umumiy marshrutlar
 router.use("/ai", aiRoutes);
 router.use("/top-sales", topSalesRoutes);
 router.use("/faqs", faqRoutes)
+router.use("/settings", settingsRoutes);
 
 router.use("/click", clickRoutes); // Click.uz uchun marshrutlar
 router.use("/payme", paymeRoutes); // Payme uchun marshrutlar
@@ -88,4 +91,5 @@ router.use("/admin/comments", adminCommentRoutes); // Kommentlar uchun admin mar
 router.use("/admin/news", adminNewsRoutes); // Yangiliklar uchun admin marshrutlari
 router.use("/admin/branches", adminLocationRoutes); // Locationlar uchun admin marshrutlari
 router.use("/admin/faqs", adminFaqRoutes);
+router.use("/admin/settings", adminSettingsRoutes);
 module.exports = router;

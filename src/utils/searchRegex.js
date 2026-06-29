@@ -13,9 +13,11 @@ const normalizeSearchText = (value) => {
 const stripApostrophes = (value) =>
   String(value || "").replace(new RegExp(`[${escapeRegex(APOSTROPHE_CHARS)}]`, "g"), "");
 
+const normalizeApostrophes = (value) =>
+  String(value || "").replace(new RegExp(`[${escapeRegex(APOSTROPHE_CHARS)}]`, "g"), "'");
+
 const latinToCyrillic = (value) => {
-  let text = String(value || "").toLowerCase();
-  text = text.replace(new RegExp(`[${escapeRegex(APOSTROPHE_CHARS)}]`, "g"), "'");
+  let text = normalizeApostrophes(value).toLowerCase();
 
   const digraphs = [
     ["o'", "ў"],
@@ -95,6 +97,7 @@ const cyrillicToLatin = (value) => {
     ц: "ts",
     ч: "ch",
     ш: "sh",
+    щ: "sh",
     ъ: "",
     ь: "",
     э: "e",
@@ -104,11 +107,11 @@ const cyrillicToLatin = (value) => {
 
   return String(value || "")
     .toLowerCase()
-    .replace(/[а-яёғқҳўъь]/giu, (char) => letters[char.toLowerCase()] ?? char);
+    .replace(/[а-яёғқҳў]/giu, (char) => letters[char.toLowerCase()] ?? char);
 };
 
 const buildLooseLatinPattern = (value) => {
-  const text = stripApostrophes(value).toLowerCase();
+  const text = stripApostrophes(cyrillicToLatin(value)).toLowerCase();
   let pattern = "";
 
   for (const char of text) {
@@ -123,14 +126,14 @@ const buildLooseLatinPattern = (value) => {
 };
 
 const buildLooseCyrillicPattern = (value) => {
-  const text = stripApostrophes(value).toLowerCase();
+  const text = stripApostrophes(cyrillicToLatin(value)).toLowerCase();
   const tokens = [];
 
   for (let index = 0; index < text.length; index += 1) {
     const rest = text.slice(index);
 
     if (rest.startsWith("sh")) {
-      tokens.push("ш");
+      tokens.push("[шщ]");
       index += 1;
       continue;
     }
@@ -204,9 +207,10 @@ const buildSearchPattern = (value, { exact = false } = {}) => {
   if (!text) return "";
 
   const latinVariant = cyrillicToLatin(text);
+  const cyrillicVariant = latinToCyrillic(latinVariant);
   const variants = [
     escapeRegex(text),
-    escapeRegex(latinToCyrillic(text)),
+    escapeRegex(cyrillicVariant),
     escapeRegex(latinVariant),
     escapeRegex(stripApostrophes(latinVariant)),
     buildLooseLatinPattern(text),

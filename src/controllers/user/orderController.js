@@ -6,6 +6,7 @@ const socketEvents = require('../../sockets/events');
 const apiResponse = require('../../utils/apiResponse');
 const { buildClickUrl } = require('../../payment/click/clickService');
 const { buildPaymeCheckoutUrl } = require('../../payment/payme/paymeService');
+const { formatUzPhone, normalizePhone } = require('../../utils/phone');
 
 
 /**
@@ -113,10 +114,23 @@ const trackGuestOrder = async (req, res, next) => {
       );
     }
 
+    const formattedPhone = formatUzPhone(phone);
+    const phoneDigits = normalizePhone(formattedPhone);
+    const localPhone = phoneDigits.startsWith('998')
+      ? phoneDigits.slice(3)
+      : phoneDigits;
+    const phoneVariants = [
+      phone,
+      formattedPhone,
+      phoneDigits,
+      localPhone,
+      `+${phoneDigits}`,
+      localPhone ? `+998${localPhone}` : '',
+    ].filter(Boolean);
+
     const order = await Order.findOne({
       orderNumber,
-      user: { $exists: false },
-      "shippingAddress.phone": phone,
+      "shippingAddress.phone": { $in: phoneVariants },
     }).populate({
       path: 'items.product',
       select: 'title images price author publisher',
