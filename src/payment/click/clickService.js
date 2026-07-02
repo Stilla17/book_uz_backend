@@ -49,6 +49,13 @@ function verifyClickSign(body, action) {
   );
 }
 
+function buildReturnUrl(orderId) {
+  const returnUrl = new URL(clickConfig.returnUrl);
+  returnUrl.searchParams.set("orderId", orderId);
+
+  return returnUrl.toString();
+}
+
 function buildClickUrl(orderId, amount) {
   getRequiredRedirectConfig();
 
@@ -57,7 +64,7 @@ function buildClickUrl(orderId, amount) {
     merchant_id: clickConfig.merchantId,
     amount: Number(amount).toFixed(2),
     transaction_param: orderId,
-    return_url: clickConfig.returnUrl,
+    return_url: buildReturnUrl(orderId),
   });
 
   return `${clickConfig.baseUrl}?${params.toString()}`;

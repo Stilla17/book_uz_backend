@@ -4,6 +4,7 @@ const Product = require('../../models/Product');
 const orderService = require('../../services/orderService');
 const socketEvents = require('../../sockets/events');
 const apiResponse = require('../../utils/apiResponse');
+const { getEffectiveProductPrice } = require('../../utils/productDiscounts');
 const { buildClickUrl } = require('../../payment/click/clickService');
 const { buildPaymeCheckoutUrl } = require('../../payment/payme/paymeService');
 const { formatUzPhone, normalizePhone } = require('../../utils/phone');
@@ -202,12 +203,11 @@ const reOrder = async (req, res, next) => {
     for (const item of order.items) {
       const product = productMap.get(item.product.toString());
       const itemIndex = cart.items.findIndex(p => p.product.toString() === item.product.toString());
+      const price = await getEffectiveProductPrice(product);
       if (itemIndex > -1) {
         cart.items[itemIndex].quantity += item.quantity;
+        cart.items[itemIndex].price = price;
       } else {
-        const price = product.discountPrice > 0
-          ? product.discountPrice
-          : product.price;
         cart.items.push({ product: item.product, quantity: item.quantity, price });
       }
     }

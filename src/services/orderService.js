@@ -6,6 +6,7 @@ const Coupon = require("../models/Coupon");
 const Counter = require("../models/Counter");
 const User = require("../models/User");
 const { calculateCouponDiscount } = require("../utils/couponDiscount");
+const { applyDiscountToProduct, getActiveDiscounts } = require("../utils/productDiscounts");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const { isValidPhone } = require("../utils/validator");
 const { getDeliveryFee } = require("./storeSettingsService");
@@ -243,6 +244,7 @@ class OrderService {
         throw this.createError("Savat bo'sh, buyurtma berib bo'lmaydi");
       }
 
+      const activeDiscounts = await getActiveDiscounts();
       let subTotal = 0;
       const orderItems = [];
 
@@ -262,8 +264,11 @@ class OrderService {
           );
         }
 
+        const discountedProduct = applyDiscountToProduct(product, activeDiscounts);
         const price =
-          product.discountPrice > 0 ? product.discountPrice : product.price;
+          discountedProduct.discountPrice > 0
+            ? discountedProduct.discountPrice
+            : discountedProduct.price;
         subTotal += price * quantity;
 
         orderItems.push({

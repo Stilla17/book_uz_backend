@@ -1,6 +1,7 @@
 const Cart = require('../../models/Cart');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
+const { applyActiveDiscountsToProducts, getEffectiveProductPrice } = require('../../utils/productDiscounts');
 
 const populateCartProducts = (query) =>
   query.populate({
@@ -12,6 +13,37 @@ const populateCartProducts = (query) =>
     ],
   });
 
+const withDiscountedCart = async (cart) => {
+  if (!cart) return cart;
+
+  const cartObject = typeof cart.toObject === 'function' ? cart.toObject() : { ...cart };
+  const products = cartObject.items
+    .map((item) => item.product)
+    .filter((product) => product && typeof product === 'object');
+  const discountedProducts = await applyActiveDiscountsToProducts(products);
+  const productById = new Map(
+    discountedProducts.map((product) => [product._id?.toString(), product]),
+  );
+
+  cartObject.items = cartObject.items.map((item) => {
+    const productId = item.product?._id?.toString();
+    const product = productById.get(productId) || item.product;
+    const price = product?.discountPrice > 0 ? product.discountPrice : product?.price || item.price;
+
+    return {
+      ...item,
+      product,
+      price,
+    };
+  });
+  cartObject.totalPrice = cartObject.items.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0,
+  );
+
+  return cartObject;
+};
+
 // 1. Savatni ko'rish (Get Cart)
 
 exports.getCart = async (req, res, next) => {
@@ -20,7 +52,7 @@ exports.getCart = async (req, res, next) => {
     
     if (!cart) return apiResponse(res, 200, true, "Savat bo'sh", { items: [], totalPrice: 0 });
 
-    apiResponse(res, 200, true, "Savat ma'lumotlari", cart);
+    apiResponse(res, 200, true, "Savat ma'lumotlari", await withDiscountedCart(cart));
   } catch (error) { next(error); }
 };
 
@@ -37,19 +69,22 @@ exports.addToCart = async (req, res, next) => {
 
     let cart = await Cart.findOne({ user: userId });
 
+    const effectivePrice = await getEffectiveProductPrice(product);
+
     if (!cart) {
       cart = await Cart.create({
         user: userId,
-        items: [{ product: productId, quantity, price: product.price }],
-        totalPrice: product.price * quantity
+        items: [{ product: productId, quantity, price: effectivePrice }],
+        totalPrice: effectivePrice * quantity
       });
     } else {
       const itemIndex = cart.items.findIndex(p => p.product.toString() === productId);
       
       if (itemIndex > -1) {
         cart.items[itemIndex].quantity += quantity;
+        cart.items[itemIndex].price = effectivePrice;
       } else {
-        cart.items.push({ product: productId, quantity, price: product.price });
+        cart.items.push({ product: productId, quantity, price: effectivePrice });
       }
 
       cart.totalPrice = cart.items.reduce((total, item) => total + (item.quantity * item.price), 0);
@@ -58,7 +93,7 @@ exports.addToCart = async (req, res, next) => {
 
     const populatedCart = await populateCartProducts(Cart.findById(cart._id));
 
-    apiResponse(res, 200, true, "Savat yangilandi", populatedCart);
+    apiResponse(res, 200, true, "Savat yangilandi", await withDiscountedCart(populatedCart));
   } catch (error) { next(error); }
 };
 
@@ -84,7 +119,7 @@ exports.updateCartItem = async (req, res, next) => {
 
       const populatedCart = await populateCartProducts(Cart.findById(cart._id));
       
-      return apiResponse(res, 200, true, "Miqdor yangilandi", populatedCart);
+      return apiResponse(res, 200, true, "Miqdor yangilandi", await withDiscountedCart(populatedCart));
     }
     
     apiResponse(res, 404, false, "Mahsulot savatda topilmadi");
@@ -110,7 +145,7 @@ exports.removeFromCart = async (req, res, next) => {
 
     const populatedCart = await populateCartProducts(Cart.findById(cart._id));
 
-    apiResponse(res, 200, true, "Mahsulot savatdan olib tashlandi", populatedCart);
+    apiResponse(res, 200, true, "Mahsulot savatdan olib tashlandi", await withDiscountedCart(populatedCart));
   } catch (error) { next(error); }
 };
 

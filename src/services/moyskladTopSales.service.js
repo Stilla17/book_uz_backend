@@ -2,6 +2,7 @@ const axios = require("axios");
 const cron = require("node-cron");
 const Product = require("../models/Product");
 const MoyskladTopSales = require("../models/MoyskladTopSales");
+const { applyActiveDiscountsToProducts } = require("../utils/productDiscounts");
 const {
   getMoyskladBaseUrl,
   moyskladHeaders,
@@ -206,15 +207,17 @@ const getCachedTopSales = async (period = "week") => {
 
   if (!cache) return null;
 
+  const products = cache.products
+    .filter((item) => item.product)
+    .map((item) => ({
+      ...item.product,
+      barcode: item.barcode || item.product.barcode,
+      soldQuantity: item.soldQuantity,
+    }));
+
   return {
     ...cache,
-    products: cache.products
-      .filter((item) => item.product)
-      .map((item) => ({
-        ...item.product,
-        barcode: item.barcode || item.product.barcode,
-        soldQuantity: item.soldQuantity,
-      })),
+    products: await applyActiveDiscountsToProducts(products),
   };
 };
 

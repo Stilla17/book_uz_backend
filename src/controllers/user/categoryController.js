@@ -2,6 +2,7 @@ const Category = require('../../models/Category');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { applyActiveDiscountsToProducts } = require('../../utils/productDiscounts');
 const {
   getCategoryName,
   getSubgenreName,
@@ -262,11 +263,12 @@ const getCategoryProducts = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit));
     const hydratedProducts = await hydrateProductRelations(products);
+    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
 
     const total = await Product.countDocuments(filter);
 
     return apiResponse(res, 200, true, "Kategoriya kitoblari", {
-      products: hydratedProducts,
+      products: discountedProducts,
       pagination: {
         total,
         page: Number(page),

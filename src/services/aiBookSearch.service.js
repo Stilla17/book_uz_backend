@@ -3,6 +3,7 @@ const Product = require("../models/Product");
 const Author = require("../models/Author");
 const Publisher = require("../models/Publisher");
 const Category = require("../models/Category");
+const { applyActiveDiscountsToProducts } = require("../utils/productDiscounts");
 const { buildSearchRegex, normalizeSearchText } = require("../utils/searchRegex");
 
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value?.toString?.());
@@ -188,7 +189,9 @@ const searchBooks = async ({
     categories: await buildRefMap(Category, products, "category", "title slug"),
   };
 
-  return products.map((product) => formatProductForAI(product, refs));
+  const discountedProducts = await applyActiveDiscountsToProducts(products);
+
+  return discountedProducts.map((product) => formatProductForAI(product, refs));
 };
 
 module.exports = {

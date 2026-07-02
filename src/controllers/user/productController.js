@@ -4,6 +4,7 @@ const Publisher = require('../../models/Publisher');
 const Author = require('../../models/Author');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { applyActiveDiscountsToProducts } = require('../../utils/productDiscounts');
 const { buildSearchPattern, buildSearchRegex } = require('../../utils/searchRegex');
 
 const CATEGORY_SELECT = 'name title subgenres';
@@ -354,10 +355,11 @@ exports.getAllProducts = async (req, res, next) => {
     ]);
 
     const hydratedProducts = await hydrateProductRelations(products);
+    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(res, 200, true, "Mahsulotlar ro'yxati", {
-      products: hydratedProducts.map((product) => withWishlistField(product, wishlistSet)),
+      products: discountedProducts.map((product) => withWishlistField(product, wishlistSet)),
       pagination: {
         total,
         page: Number(page),
@@ -390,6 +392,7 @@ exports.getRelatedProducts = async (req, res, next) => {
     .populate('publisher');
 
     const hydratedRelated = await hydrateProductRelations(related);
+    const discountedRelated = await applyActiveDiscountsToProducts(hydratedRelated);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(
@@ -397,7 +400,7 @@ exports.getRelatedProducts = async (req, res, next) => {
       200,
       true,
       "O'xshash mahsulotlar",
-      hydratedRelated.map((product) => withWishlistField(product, wishlistSet)),
+      discountedRelated.map((product) => withWishlistField(product, wishlistSet)),
     );
   } catch (error) { next(error); }
 };
@@ -414,6 +417,7 @@ exports.getNewArrivals = async (req, res, next) => {
       .populate('author')
       .populate('publisher');
     const hydratedProducts = await hydrateProductRelations(products);
+    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(
@@ -421,7 +425,7 @@ exports.getNewArrivals = async (req, res, next) => {
       200,
       true,
       "Yangi kelgan kitoblar",
-      hydratedProducts.map((product) => withWishlistField(product, wishlistSet)),
+      discountedProducts.map((product) => withWishlistField(product, wishlistSet)),
     );
   } catch (error) { next(error); }
 };
@@ -449,9 +453,10 @@ exports.getProductById = async (req, res, next) => {
     }
     
     const hydratedProduct = await hydrateProductRelations(product);
+    const discountedProduct = await applyActiveDiscountsToProducts(hydratedProduct);
     const wishlistSet = getWishlistSet(req);
 
-    apiResponse(res, 200, true, "Mahsulot ma'lumotlari", withWishlistField(hydratedProduct, wishlistSet));
+    apiResponse(res, 200, true, "Mahsulot ma'lumotlari", withWishlistField(discountedProduct, wishlistSet));
   } catch (error) {
     console.error("Error in getProductById:", error);
     next(error);

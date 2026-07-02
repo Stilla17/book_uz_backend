@@ -48,6 +48,17 @@ function amountsEqual(clickAmount, orderAmount) {
   return Math.abs(Number(clickAmount) - Number(orderAmount)) < 0.01;
 }
 
+async function markOrderPaid(orderId) {
+  return Order.findByIdAndUpdate(
+    orderId,
+    {
+      status: "CONFIRMED",
+      paymentStatus: "PAID",
+    },
+    { new: true },
+  );
+}
+
 function getMerchantTransId(body) {
   return String(
     body.merchant_trans_id ||
@@ -160,6 +171,7 @@ async function complete(body) {
     merchant_prepare_id,
     amount,
     action,
+    service_id,
     error: clickError,
   } = body;
   const merchant_trans_id = getMerchantTransId(body);
@@ -169,6 +181,14 @@ async function complete(body) {
       click_trans_id,
       merchant_trans_id,
       CLICK_ERRORS.ACTION_NOT_FOUND,
+    );
+  }
+
+  if (String(service_id) !== String(clickConfig.serviceId)) {
+    return errorResponse(
+      click_trans_id,
+      merchant_trans_id,
+      CLICK_ERRORS.BAD_REQUEST,
     );
   }
 
@@ -193,7 +213,10 @@ async function complete(body) {
     click_trans_id,
     merchant_trans_id,
   });
-  if (!transaction) {
+  if (
+    transaction &&
+    String(merchant_prepare_id) !== String(transaction.merchant_prepare_id)
+  ) {
     return errorResponse(
       click_trans_id,
       merchant_trans_id,
@@ -201,7 +224,11 @@ async function complete(body) {
     );
   }
 
-  if (String(merchant_prepare_id) !== String(transaction.merchant_prepare_id)) {
+  if (
+    !transaction &&
+    merchant_prepare_id &&
+    String(merchant_prepare_id) !== String(order._id)
+  ) {
     return errorResponse(
       click_trans_id,
       merchant_trans_id,
@@ -218,17 +245,15 @@ async function complete(body) {
   }
 
   if (order.paymentStatus === "PAID") {
-    return errorResponse(
-      click_trans_id,
-      merchant_trans_id,
-      CLICK_ERRORS.ALREADY_PAID,
-    );
+    return completeSuccess(click_trans_id, merchant_trans_id, order._id.toString());
   }
 
   if (Number(clickError) < 0) {
-    await ClickTransaction.findByIdAndUpdate(transaction._id, {
-      status: "cancelled",
-    });
+    if (transaction) {
+      await ClickTransaction.findByIdAndUpdate(transaction._id, {
+        status: "cancelled",
+      });
+    }
     await Order.findByIdAndUpdate(merchant_trans_id, {
       status: "CANCELLED",
       paymentStatus: "FAILED",
@@ -240,14 +265,28 @@ async function complete(body) {
     );
   }
 
-  await ClickTransaction.findByIdAndUpdate(transaction._id, {
-    status: "paid",
-    paid_at: new Date(),
-  });
-  await Order.findByIdAndUpdate(merchant_trans_id, {
-    status: "CONFIRMED",
-    paymentStatus: "PAID",
-  });
+  if (transaction) {
+    await ClickTransaction.findByIdAndUpdate(transaction._id, {
+      status: "paid",
+      paid_at: new Date(),
+    });
+  } else {
+    await ClickTransaction.findOneAndUpdate(
+      { click_trans_id, merchant_trans_id },
+      {
+        click_trans_id,
+        merchant_trans_id,
+        merchant_prepare_id: merchant_prepare_id || order._id.toString(),
+        amount: Number(amount),
+        service_id,
+        status: "paid",
+        paid_at: new Date(),
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  await markOrderPaid(merchant_trans_id);
 
   return completeSuccess(click_trans_id, merchant_trans_id, order._id.toString());
 }

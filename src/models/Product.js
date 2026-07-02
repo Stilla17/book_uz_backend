@@ -27,7 +27,7 @@ const ProductSchema = new mongoose.Schema(
     stock: { type: Number, default: 0 },
     branchStocks: [
       {
-        storeId: String,
+        storeId: String,  
         storeName: String,
         quantity: Number,
         reserve: Number,

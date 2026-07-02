@@ -36,6 +36,7 @@ const adminProductRoutes = require("./admin/adminProductRoutes");
 const adminReviewRoutes = require("./admin/reviewRoutes");
 const adminUserRoutes = require("./admin/adminUserRoutes");
 const adminCouponRoutes = require("./admin/couponRoutes");
+const adminDiscountRoutes = require("./admin/discountRoutes");
 const adminOrderRoutes = require("./admin/adminOrderRoutes");
 const adminSubscription = require("./admin/adminSubscriptionRoutes");
 const adminBannerRoutes = require("./admin/bannerRoutes");
@@ -83,6 +84,7 @@ router.use("/admin/products", adminProductRoutes); //
 router.use("/admin/reviews", adminReviewRoutes); //
 router.use("/admin/users", adminUserRoutes); //
 router.use("/admin/coupons", adminCouponRoutes); //
+router.use("/admin/discounts", adminDiscountRoutes);
 router.use("/admin/orders", adminOrderRoutes); //
 router.use("/admin/subscriptions", adminSubscription); //
 router.use("/admin/banners", adminBannerRoutes); // Bannerlar uchun admin marshrutlari

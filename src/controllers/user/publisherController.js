@@ -2,6 +2,7 @@ const Publisher = require('../../models/Publisher');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
+const { applyActiveDiscountsToProducts } = require('../../utils/productDiscounts');
 const { buildSearchRegex } = require('../../utils/searchRegex');
 const {
   buildPublisherQuery,
@@ -133,10 +134,11 @@ const getPublisherProducts = async (req, res, next) => {
     ]);
 
     const hydratedProducts = await hydrateProductRelations(products);
+    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
 
     return apiResponse(res, 200, true, "Nashriyot kitoblari", {
       publisher,
-      products: hydratedProducts,
+      products: discountedProducts,
       pagination: {
         total,
         page: Number(page),
