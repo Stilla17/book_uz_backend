@@ -34,6 +34,10 @@ const normalizePayload = (payload = {}) => {
     normalized.isTop = parseBoolean(payload.isTop);
   }
 
+  if (payload.isActive !== undefined) {
+    normalized.isActive = parseBoolean(payload.isActive);
+  }
+
   return normalized;
 };
 

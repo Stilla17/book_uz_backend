@@ -179,7 +179,7 @@ exports.getAllProducts = async (req, res, next) => {
   try {
     const { keyword, category, author, publisher, publish, minPrice, maxPrice, sort, page = 1, limit = 12, subCategoryId, subgenreId, subgenre, language, contentLanguage } = req.query;
     
-    let query = {};
+    let query = { isActive: true };
 
     const andFilters = [];
 
@@ -378,10 +378,14 @@ exports.getAllProducts = async (req, res, next) => {
 
 exports.getRelatedProducts = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne({
+      _id: req.params.id,
+      isActive: true,
+    });
     if (!product) return apiResponse(res, 404, false, "Mahsulot topilmadi");
 
     const related = await Product.find({
+      isActive: true,
       category: product.category,
       ...(product.subCategoryId ? { subCategoryId: product.subCategoryId } : {}),
       _id: { $ne: product._id } 
@@ -411,7 +415,7 @@ exports.getRelatedProducts = async (req, res, next) => {
 
 exports.getNewArrivals = async (req, res, next) => {
   try {
-    const products = await Product.find()
+    const products = await Product.find({ isActive: true })
       .sort('-createdAt')
       .limit(8)
       .populate('author')
@@ -438,9 +442,9 @@ exports.getProductById = async (req, res, next) => {
     
     let query;
     if (id.match(/^[0-9a-fA-F]{24}$/)) {
-      query = { _id: id };
+      query = { _id: id, isActive: true };
     } else {
-      query = { slug: id };
+      query = { slug: id, isActive: true };
     }
 
     const product = await Product.findOne(query)

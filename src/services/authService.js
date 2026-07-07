@@ -223,6 +223,7 @@ class AuthService {
 
     const existingProductIds = await Product.find({
       _id: { $in: productIds },
+      isActive: true,
     }).distinct("_id");
     const wishlistSet = new Set([
       ...(user.wishlist || []).map((id) => id.toString()),

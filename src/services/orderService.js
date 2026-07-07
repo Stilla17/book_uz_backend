@@ -212,7 +212,10 @@ class OrderService {
       if (normalizedUserId && !useProvidedItems) {
         cart = await Cart.findOne({ user: normalizedUserId })
           .session(session)
-          .populate("items.product");
+          .populate({
+            path: "items.product",
+            match: { isActive: true },
+          });
         sourceItems = cart?.items || [];
       }
 
@@ -222,6 +225,7 @@ class OrderService {
           .filter((productId) => mongoose.Types.ObjectId.isValid(productId));
         const products = await Product.find({
           _id: { $in: productIds },
+          isActive: true,
         }).session(session);
         const productMap = new Map(
           products.map((product) => [product._id.toString(), product]),
@@ -281,8 +285,8 @@ class OrderService {
         // author/category populated object bo'lib qolgan productlar validatsiyada yiqilishi mumkin.
         const stockUpdate = await Product.updateOne(
           allowOutOfStock
-            ? { _id: product._id }
-            : { _id: product._id, stock: { $gte: quantity } },
+            ? { _id: product._id, isActive: true }
+            : { _id: product._id, isActive: true, stock: { $gte: quantity } },
           { $inc: { stock: -quantity } },
           { session },
         );

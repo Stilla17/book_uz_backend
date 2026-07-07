@@ -26,6 +26,7 @@ exports.getSuggestions = async (req, res, next) => {
 
     const [products, categories, authors] = await Promise.all([
       Product.find({
+        isActive: true,
         $or: [
           { "title.uz": searchRegex },
           { "title.ru": searchRegex },

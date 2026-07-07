@@ -178,7 +178,10 @@ const reOrder = async (req, res, next) => {
     if (!order) return apiResponse(res, 404, false, "Buyurtma topilmadi");
 
     const productIds = order.items.map(item => item.product);
-    const products = await Product.find({ _id: { $in: productIds } });
+    const products = await Product.find({
+      _id: { $in: productIds },
+      isActive: true,
+    });
     const productMap = new Map(
       products.map(product => [product._id.toString(), product]),
     );

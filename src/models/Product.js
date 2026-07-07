@@ -27,7 +27,7 @@ const ProductSchema = new mongoose.Schema(
     stock: { type: Number, default: 0 },
     branchStocks: [
       {
-        storeId: String,  
+        storeId: String,
         storeName: String,
         quantity: Number,
         reserve: Number,
@@ -80,6 +80,7 @@ const ProductSchema = new mongoose.Schema(
 
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 );

@@ -7,6 +7,7 @@ const populateCartProducts = (query) =>
   query.populate({
     path: 'items.product',
     select: 'title price discountPrice images stock slug format author publisher',
+    match: { isActive: true },
     populate: [
       { path: 'author' },
       { path: 'publisher' },
@@ -63,7 +64,7 @@ exports.addToCart = async (req, res, next) => {
     const { productId, quantity = 1 } = req.body;
     const userId = req.user.id;
 
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({ _id: productId, isActive: true });
     if (!product) return apiResponse(res, 404, false, "Mahsulot topilmadi");
     if (product.stock < quantity) return apiResponse(res, 400, false, "Omborda yetarli mahsulot yo'q");
 

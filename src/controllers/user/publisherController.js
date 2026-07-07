@@ -116,6 +116,7 @@ const getPublisherProducts = async (req, res, next) => {
 
     const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
     const filter = {
+      isActive: true,
       $or: [
         { publisher: publisher._id },
         ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),

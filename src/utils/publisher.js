@@ -12,6 +12,7 @@ const getPublisherBooksCount = async (publisher) => {
   const publisherBookIds = Array.isArray(publisher.books) ? publisher.books : [];
 
   return Product.countDocuments({
+    isActive: true,
     $or: [
       { publisher: publisher._id },
       ...(publisherBookIds.length ? [{ _id: { $in: publisherBookIds } }] : []),

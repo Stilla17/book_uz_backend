@@ -1,6 +1,7 @@
 const AmoContact = require("../models/AmoContact");
 const { getAllContacts } = require("./amocrmService");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
+const { isValidPhone } = require("../utils/validator");
 
 const normalizeEmail = (email) => email?.toString().trim().toLowerCase() || "";
 
@@ -9,19 +10,19 @@ function getFieldValues(contact, fieldCode) {
     (item) => item.field_code === fieldCode,
   );
 
-  return field?.values
-    ?.map((item) => item.value)
-    .filter(Boolean) || [];
+  return field?.values?.map((item) => item.value).filter(Boolean) || [];
 }
 
 async function syncAmoContacts() {
   const contacts = await getAllContacts();
 
-  const operations = contacts.map((contact) => {
+  const operations = contacts.flatMap((contact) => {
     const phones = getFieldValues(contact, "PHONE")
       .map(formatUzPhone)
-      .filter(Boolean);
+      .filter(isValidPhone);
     const emails = getFieldValues(contact, "EMAIL");
+
+    if (phones.length === 0) return [];
 
     return {
       updateOne: {

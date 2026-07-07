@@ -34,6 +34,7 @@ const populateWishlist = (query) =>
   query.populate({
     path: 'wishlist',
     select: WISHLIST_PRODUCT_SELECT,
+    match: { isActive: true },
     populate: [
       { path: 'author' },
       { path: 'publisher' },
@@ -168,7 +169,10 @@ const toggleWishlist = async (req, res, next) => {
       return apiResponse(res, 400, false, "productId noto'g'ri");
     }
 
-    const product = await Product.findById(productId).select('_id');
+    const product = await Product.findOne({
+      _id: productId,
+      isActive: true,
+    }).select('_id');
     if (!product) {
       return apiResponse(res, 404, false, "Mahsulot topilmadi");
     }
@@ -210,7 +214,10 @@ const mergeWishlist = async (req, res, next) => {
       return apiResponse(res, 200, true, "Saralanganlar birlashtirildi", user.wishlist);
     }
 
-    const existingProductIds = await Product.find({ _id: { $in: productIds } }).distinct('_id');
+    const existingProductIds = await Product.find({
+      _id: { $in: productIds },
+      isActive: true,
+    }).distinct('_id');
 
     const user = await populateWishlist(User.findByIdAndUpdate(
       req.user._id,

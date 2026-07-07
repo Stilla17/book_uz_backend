@@ -85,7 +85,7 @@ const fetchDemandPositions = (demandId) =>
 
 const buildLocalProductLookup = async () => {
   const products = await Product.find(
-    { barcode: { $exists: true, $ne: "" } },
+    { barcode: { $exists: true, $ne: "" }, isActive: true },
     "barcode",
   ).lean();
   const lookup = new Map();
@@ -202,7 +202,10 @@ const startTopSalesCron = () => {
 
 const getCachedTopSales = async (period = "week") => {
   const cache = await MoyskladTopSales.findOne({ period })
-    .populate("products.product")
+    .populate({
+      path: "products.product",
+      match: { isActive: true },
+    })
     .lean();
 
   if (!cache) return null;

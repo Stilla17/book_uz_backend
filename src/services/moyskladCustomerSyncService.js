@@ -1,6 +1,7 @@
 const axios = require("axios");
 const AmoContact = require("../models/AmoContact");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
+const { isValidPhone } = require("../utils/validator");
 
 const DEFAULT_BASE_URL = "https://api.moysklad.ru/api/remap/1.2";
 const PAGE_SIZE = 1000;
@@ -194,12 +195,15 @@ async function syncMoyskladCustomers() {
     emails.filter(Boolean).forEach((email) => byEmail.set(email, contact._id));
   }
 
-  const operations = customers.map((customer) => {
+  const operations = customers.flatMap((customer) => {
     const formattedPhone = formatUzPhone(customer.phone);
     const phone = normalizePhone(formattedPhone);
     const email = normalizeEmail(customer.email);
     const stats = statsByCounterpartyId.get(customer.id);
     const orderStats = ordersByCounterpartyId.get(customer.id);
+
+    if (!isValidPhone(formattedPhone)) return [];
+
     const existingId =
       byMoyskladId.get(customer.id) ||
       (phone ? byPhone.get(phone) : null) ||

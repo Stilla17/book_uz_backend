@@ -105,7 +105,7 @@ const getAllUsersAdmin = async (req, res, next) => {
     const returnAll = String(all).toLowerCase() === "true";
     const paginationParams = getPaginationParams(req.query);
     const userFilter = {};
-    const amoContactFilter = {};
+    const amoContactFilter = { normalizedPhones: /^\d{12}$/ };
 
     if (role) userFilter.role = role.toUpperCase();
 

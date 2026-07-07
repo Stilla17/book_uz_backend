@@ -11,7 +11,7 @@ class ProductService {
       search, sort, page = 1, limit = 10 
     } = query;
 
-    let filter = {};
+    let filter = { isActive: true };
 
     // Filterlash mantiqi
     if (category) filter.category = category;

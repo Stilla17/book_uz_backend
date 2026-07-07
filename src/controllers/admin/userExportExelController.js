@@ -10,7 +10,7 @@ const exportUsersExcel = async (req, res, next) => {
       )
       .lean();
 
-    const amoContacts = await AmoContact.find()
+    const amoContacts = await AmoContact.find({ normalizedPhones: /^\d{12}$/ })
       .select(
         "name firstName lastName emails phones telegramUsername salesCount createdAt birthDate",
       )
