@@ -1,17 +1,27 @@
 require("dotenv").config();
-const axios = require("axios");
+const dns = require("dns");
+const mongoose = require("mongoose");
+
+dns.setServers(["1.1.1.1", "1.0.0.1"]);
+dns.setDefaultResultOrder("ipv4first");
+
+const connectDB = require("../src/config/db");
+const { amoRequest } = require("../src/services/amocrmService");
 
 async function testConnection() {
   try {
-    const url = `https://${process.env.AMOCRM_SUBDOMAIN}.amocrm.ru/api/v4/account`;
-    const { data } = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${process.env.AMOCRM_ACCESS_TOKEN}`,
-      },
+    await connectDB();
+
+    const data = await amoRequest({
+      method: "GET",
+      url: "/api/v4/account",
     });
+
     console.log("amoCRM ulandi:", data.name);
   } catch (error) {
     console.error(error.response?.data || error.message);
+  } finally {
+    await mongoose.disconnect();
   }
 }
 testConnection();

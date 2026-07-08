@@ -81,6 +81,7 @@ const ProductSchema = new mongoose.Schema(
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    tegs: [{ type: String }],
   },
   { timestamps: true },
 );

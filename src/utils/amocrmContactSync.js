@@ -16,20 +16,29 @@ async function runAmoContactSync() {
   isSyncing = true;
 
   try {
-    const amoResult = await syncAmoContacts();
-    console.log(
-      `amoCRM kontaktlari sinxronlandi: ${amoResult.synchronized}/${amoResult.received}`,
-    );
+    try {
+      const amoResult = await syncAmoContacts();
+      console.log(
+        `amoCRM kontaktlari sinxronlandi: ${amoResult.synchronized}/${amoResult.received}`,
+      );
+    } catch (error) {
+      console.error(
+        "amoCRM kontakt sinxronizatsiyasi xatosi:",
+        error.response?.data || error.message,
+      );
+    }
 
-    const moyskladResult = await syncMoyskladCustomers();
-    console.log(
-      `MoySklad xaridorlari sinxronlandi: ${moyskladResult.synchronized}/${moyskladResult.received}`,
-    );
-  } catch (error) {
-    console.error(
-      "Mijozlar sinxronizatsiyasi xatosi:",
-      error.response?.data || error.message,
-    );
+    try {
+      const moyskladResult = await syncMoyskladCustomers();
+      console.log(
+        `MoySklad xaridorlari sinxronlandi: ${moyskladResult.synchronized}/${moyskladResult.received}`,
+      );
+    } catch (error) {
+      console.error(
+        "MoySklad xaridor sinxronizatsiyasi xatosi:",
+        error.response?.data || error.message,
+      );
+    }
   } finally {
     isSyncing = false;
   }

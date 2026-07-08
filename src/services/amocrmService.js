@@ -3,6 +3,10 @@ const AmoToken = require("../models/AmoToken");
 
 const baseURL = `https://${process.env.AMOCRM_SUBDOMAIN}.amocrm.ru`;
 
+function getLongLivedToken() {
+  return process.env.AMOCRM_LONG_LIVED_TOKEN || process.env.AMOCRM_LONG_TOKEN;
+}
+
 async function refreshAccessToken(token) {
   const { data } = await axios.post(`${baseURL}/oauth2/access_token`, {
     client_id: process.env.AMOCRM_CLIENT_ID,
@@ -22,6 +26,12 @@ async function refreshAccessToken(token) {
 }
 
 async function getAccessToken() {
+  const longLivedToken = getLongLivedToken();
+
+  if (longLivedToken) {
+    return longLivedToken;
+  }
+
   const token = await AmoToken.findOne();
 
   if (!token) {
