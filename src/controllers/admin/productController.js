@@ -5,8 +5,14 @@ const Publisher = require("../../models/Publisher");
 const slugify = require("../../utils/slugify");
 const apiResponse = require("../../utils/apiResponse");
 const cloudinary = require("../../config/cloudinary");
-const { getPaginationParams, buildPagination } = require("../../utils/pagination");
-const { buildSearchRegex, normalizeSearchText } = require("../../utils/searchRegex");
+const {
+  getPaginationParams,
+  buildPagination,
+} = require("../../utils/pagination");
+const {
+  buildSearchRegex,
+  normalizeSearchText,
+} = require("../../utils/searchRegex");
 const {
   findSubgenreByIdentifier,
   resolveCategoryId,

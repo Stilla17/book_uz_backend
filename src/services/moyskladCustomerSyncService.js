@@ -42,6 +42,10 @@ function getBirthDate(counterparty) {
   return field?.value ? new Date(field.value) : null;
 }
 
+function hasSyncablePhone(customer) {
+  return Boolean(customer.phone) && isValidPhone(formatUzPhone(customer.phone));
+}
+
 async function getAllMoyskladCustomers() {
   const customers = [];
   let offset = 0;
@@ -170,6 +174,7 @@ async function syncMoyskladCustomers() {
     getCounterpartyStats(),
     getCustomerOrderStats(),
   ]);
+  const customersWithPhone = customers.filter(hasSyncablePhone);
   const contacts = await AmoContact.find(
     {},
     "_id moyskladId normalizedPhones normalizedEmails phones emails",
@@ -195,14 +200,12 @@ async function syncMoyskladCustomers() {
     emails.filter(Boolean).forEach((email) => byEmail.set(email, contact._id));
   }
 
-  const operations = customers.flatMap((customer) => {
+  const operations = customersWithPhone.flatMap((customer) => {
     const formattedPhone = formatUzPhone(customer.phone);
     const phone = normalizePhone(formattedPhone);
     const email = normalizeEmail(customer.email);
     const stats = statsByCounterpartyId.get(customer.id);
     const orderStats = ordersByCounterpartyId.get(customer.id);
-
-    if (!isValidPhone(formattedPhone)) return [];
 
     const existingId =
       byMoyskladId.get(customer.id) ||
@@ -279,6 +282,7 @@ async function syncMoyskladCustomers() {
   return {
     received: customers.length,
     synchronized: operations.length,
+    skippedWithoutPhone: customers.length - customersWithPhone.length,
   };
 }
 
