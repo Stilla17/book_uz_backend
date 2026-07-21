@@ -74,9 +74,14 @@ const login = async (req, res, next) => {
 // Telefon raqam orqali OTP yuborish va tekshirish
 const sendPhoneOtp = async (req, res, next) => {
   try {
-    const { phone, name } = req.body;
+    const { phone, name, birthDate, mode } = req.body;
 
-    const result = await authService.sendPhoneOtp({ phone, name });
+    const result = await authService.sendPhoneOtp({
+      phone,
+      name,
+      birthDate,
+      mode,
+    });
 
     apiResponse(
       res,

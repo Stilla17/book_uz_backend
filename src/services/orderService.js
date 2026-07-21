@@ -6,21 +6,37 @@ const Coupon = require("../models/Coupon");
 const Counter = require("../models/Counter");
 const User = require("../models/User");
 const { calculateCouponDiscount } = require("../utils/couponDiscount");
-const { applyDiscountToProduct, getActiveDiscounts } = require("../utils/productDiscounts");
+const {
+  applyDiscountToProduct,
+  getActiveDiscounts,
+} = require("../utils/productDiscounts");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const { isValidPhone } = require("../utils/validator");
 const { getDeliveryFee } = require("./storeSettingsService");
 
-const POST_OFFICE_DELIVERY_FEE = 40000;
-const POST_TO_HOME_DELIVERY_FEE = 60000;
+const POST_OFFICE_DELIVERY_FEE = 20000;
+const POST_TO_HOME_DELIVERY_FEE = 40000;
+const FREE_DELIVERY_MIN_TOTAL = 300000;
 const POST_DELIVERY_TYPES = ["POST_OFFICE", "POST_TO_HOME"];
 
-const getOrderDeliveryFee = (deliveryType, postDeliveryType, configuredDeliveryFee) => {
+const getOrderDeliveryFee = (
+  deliveryType,
+  postDeliveryType,
+  configuredDeliveryFee,
+  subTotal,
+) => {
+  // Do'kondan olib ketish doim bepul
   if (deliveryType === "PICKUP") return 0;
+
+  // Pochtadan uyga yetkazish uchun bepul dostavka ishlamaydi
+  const isPostToHome =
+    deliveryType === "POST" && postDeliveryType === "POST_TO_HOME";
+
+  // Kitoblar summasi 300 mingdan oshsa bepul
+  if (subTotal >= FREE_DELIVERY_MIN_TOTAL && !isPostToHome) return 0;
+
   if (deliveryType === "POST") {
-    return postDeliveryType === "POST_TO_HOME"
-      ? POST_TO_HOME_DELIVERY_FEE
-      : POST_OFFICE_DELIVERY_FEE;
+    return isPostToHome ? POST_TO_HOME_DELIVERY_FEE : POST_OFFICE_DELIVERY_FEE;
   }
 
   return configuredDeliveryFee;
@@ -147,7 +163,9 @@ class OrderService {
         },
       );
       const orderNumber = counter.sequence;
-      const existingOrder = await Order.exists({ orderNumber }).session(session);
+      const existingOrder = await Order.exists({ orderNumber }).session(
+        session,
+      );
 
       if (!existingOrder) return orderNumber;
     }
@@ -268,7 +286,10 @@ class OrderService {
           );
         }
 
-        const discountedProduct = applyDiscountToProduct(product, activeDiscounts);
+        const discountedProduct = applyDiscountToProduct(
+          product,
+          activeDiscounts,
+        );
         const price =
           discountedProduct.discountPrice > 0
             ? discountedProduct.discountPrice
@@ -349,6 +370,7 @@ class OrderService {
         deliveryType,
         normalizedPostDeliveryType,
         configuredDeliveryFee,
+        subTotal,
       );
       const totalAmount = subTotal - discount + deliveryFee;
       const orderCustomer = await this.findOrCreateOrderCustomer({

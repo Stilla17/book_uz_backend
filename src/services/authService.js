@@ -108,19 +108,37 @@ class AuthService {
     return { user: sanitizeUser(user), ...tokens };
   }
 
-  async sendPhoneOtp({ phone, name }) {
+  async sendPhoneOtp({ phone, name, birthDate, mode = "login" }) {
     if (!isValidPhone(phone)) {
       throw new Error("Telefon raqam formati noto'g'ri. Masalan +998901234567");
     }
     const phoneDigits = normalizePhone(phone);
     let user = await User.findOne({ phone });
+
+    if (mode === "login" && (!user || !user.isVerified)) {
+      const error = new Error("Telefon raqami ro'yxatdan o'tmagan");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (mode === "register" && user?.isVerified) {
+      const error = new Error("Bu telefon raqami avval ro'yxatdan o'tgan");
+      error.statusCode = 409;
+      throw error;
+    }
+
     if (!user) {
       user = await User.create({
         name: name || "Foydalanuvchi",
         email: `phone-${phoneDigits}@bookuz.local`,
         phone,
+        birthDate: birthDate || undefined,
         isVerified: false,
       });
+    } else if (mode === "register") {
+      user.name = name || user.name;
+      user.birthDate = birthDate || user.birthDate;
+      await user.save();
     }
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
