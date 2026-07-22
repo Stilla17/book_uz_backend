@@ -8,6 +8,56 @@ const { isValidPhone } = require("../utils/validator");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const sendEskizSms = require("../utils/sendEskizSms");
 
+const MINIMUM_REGISTRATION_AGE = 12;
+
+const createBadRequestError = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+};
+
+const getMaximumBirthDate = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tashkent",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
+  );
+
+  return `${Number(values.year) - MINIMUM_REGISTRATION_AGE}-${values.month}-${values.day}`;
+};
+
+const validateRegistrationBirthDate = (value) => {
+  const birthDate = String(value || "").trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate);
+
+  if (!match) {
+    throw createBadRequestError("Tug'ilgan sanani to'g'ri kiriting");
+  }
+
+  const [, year, month, day] = match;
+  const parsedDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const isValidDate =
+    parsedDate.getUTCFullYear() === Number(year) &&
+    parsedDate.getUTCMonth() === Number(month) - 1 &&
+    parsedDate.getUTCDate() === Number(day);
+
+  if (!isValidDate) {
+    throw createBadRequestError("Tug'ilgan sanani to'g'ri kiriting");
+  }
+
+  if (birthDate > getMaximumBirthDate()) {
+    throw createBadRequestError(
+      "Bunday sana kiritish mumkin emas. Yosh kamida 12 bo'lishi kerak",
+    );
+  }
+
+  return birthDate;
+};
+
 const normalizeWishlistProductIds = (wishlist = []) => {
   const source = Array.isArray(wishlist) ? wishlist : [];
 
@@ -113,6 +163,8 @@ class AuthService {
       throw new Error("Telefon raqam formati noto'g'ri. Masalan +998901234567");
     }
     const phoneDigits = normalizePhone(phone);
+    const validatedBirthDate =
+      mode === "register" ? validateRegistrationBirthDate(birthDate) : birthDate;
     let user = await User.findOne({ phone });
 
     if (mode === "login" && (!user || !user.isVerified)) {
@@ -132,12 +184,12 @@ class AuthService {
         name: name || "Foydalanuvchi",
         email: `phone-${phoneDigits}@bookuz.local`,
         phone,
-        birthDate: birthDate || undefined,
+        birthDate: validatedBirthDate || undefined,
         isVerified: false,
       });
     } else if (mode === "register") {
       user.name = name || user.name;
-      user.birthDate = birthDate || user.birthDate;
+      user.birthDate = validatedBirthDate || user.birthDate;
       await user.save();
     }
 

@@ -23,10 +23,16 @@ const socketEvents = {
    */
 
   emitOrderStatusUpdate: (userId, orderId, status) => {
+    // Guest buyurtmalarda user bo'lmasligi mumkin. Bunday holatda
+    // shaxsiy socket xabari yuborilmaydi.
+    if (!userId) return;
+
     const io = getIO();
-    
+
     const statusMessages = {
-      'PROCESSING': "Buyurtmangiz tayyorlanmoqda 🛠",
+      'PENDING': "Buyurtmangiz qabul qilindi",
+      'CONFIRMED': "Buyurtmangiz tasdiqlandi",
+      'PACKED': "Buyurtmangiz tayyorlanmoqda 🛠️",
       'SHIPPED': "Buyurtmangiz yo'lga chiqdi 🚚",
       'DELIVERED': "Mahsulot yetkazib berildi ✅",
       'CANCELLED': "Buyurtmangiz bekor qilindi ❌"
@@ -58,7 +64,7 @@ const socketEvents = {
   /**
    * 4. Foydalanuvchi yozayotgani haqida (Typing...)
    */
-  
+
   emitTyping: (roomId, userName) => {
     const io = getIO();
     io.to(roomId).emit('user:typing', { userName });

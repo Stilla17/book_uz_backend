@@ -32,7 +32,7 @@ const buildBranchStocks = (stockByStore, syncedAt) =>
       storeName: storeStock.name || "",
       quantity,
       reserve,
-      available: Math.max(quantity - reserve, 0),
+      available: quantity - reserve,
       syncedAt,
     };
   });
@@ -68,7 +68,7 @@ const fetchAssortmentChunk = async (filterString) =>
     "MoySklad assortment so'rovi",
   );
 
-const syncMoyskladProducts = async () => {
+const syncMoyskladProducts = async (options = {}) => {
   if (isSyncing) {
     console.log("MoySklad sinxronizatsiyasi hali davom etmoqda");
     return;
@@ -79,8 +79,15 @@ const syncMoyskladProducts = async () => {
   try {
     console.log("🔄 Sinxronizatsiya boshlandi...");
 
+    const requestedBarcodes = new Set(
+      (options.barcodes || []).map(cleanBarcode).filter(Boolean),
+    );
+
     // 1. Bazadan ma'lumotni olamiz
-    const myProducts = await Product.find({}, "barcode price").lean();
+    const myProducts = await Product.find(
+      {},
+      "barcode price moyskladId title",
+    ).lean();
 
     // 2. Map yaratamiz (Qidiruvni million marta tezlashtiradi)
     // Kalit sifatida tozalangan barcodeni saqlaymiz
@@ -88,7 +95,16 @@ const syncMoyskladProducts = async () => {
     myProducts.forEach((p) => {
       if (p.barcode) {
         const clean = cleanBarcode(p.barcode);
-        barcodeLookup.set(clean, { id: p._id, originalBarcode: p.barcode });
+        if (requestedBarcodes.size && !requestedBarcodes.has(clean)) return;
+
+        const products = barcodeLookup.get(clean) || [];
+        products.push({
+          id: p._id,
+          moyskladId: p.moyskladId || "",
+          originalBarcode: p.barcode,
+          title: p.title,
+        });
+        barcodeLookup.set(clean, products);
       }
     });
 
@@ -98,6 +114,7 @@ const syncMoyskladProducts = async () => {
     let updatedCount = 0;
     const chunkSize = 50;
     let canSyncBranchStocks = true;
+    const conflictedBarcodes = new Set();
 
     for (let i = 0; i < myCleanBarcodes.length; i += chunkSize) {
       const chunk = myCleanBarcodes.slice(i, i + chunkSize);
@@ -115,6 +132,13 @@ const syncMoyskladProducts = async () => {
       const msProducts = response.data.rows;
 
       if (msProducts && msProducts.length > 0) {
+        const msBarcodeCounts = new Map();
+        msProducts.forEach((msProduct) => {
+          const barcode = cleanBarcode(getMoyskladBarcode(msProduct));
+          if (!barcode) return;
+          msBarcodeCounts.set(barcode, (msBarcodeCounts.get(barcode) || 0) + 1);
+        });
+
         // 🚀 ENDI BULK (OMMAVIY) YANGILASH TAYYORLAYMIZ
         const bulkOps = [];
 
@@ -125,10 +149,28 @@ const syncMoyskladProducts = async () => {
 
           if (msBarcodeRaw) {
             const cleanMs = cleanBarcode(msBarcodeRaw);
-            const myMatch = barcodeLookup.get(cleanMs);
+            const localCandidates = barcodeLookup.get(cleanMs) || [];
+            let myMatch = localCandidates.find(
+              (product) => product.moyskladId === msProduct.id,
+            );
+
+            if (
+              !myMatch &&
+              localCandidates.length === 1 &&
+              msBarcodeCounts.get(cleanMs) === 1 &&
+              !localCandidates[0].moyskladId
+            ) {
+              myMatch = localCandidates[0];
+            }
+
+            if (!myMatch && localCandidates.length) {
+              conflictedBarcodes.add(cleanMs);
+              continue;
+            }
 
             if (myMatch) {
               const updateFields = {
+                moyskladId: msProduct.id,
                 ...(msPrice ? { price: msPrice } : {}),
               };
 
@@ -142,8 +184,11 @@ const syncMoyskladProducts = async () => {
                     stockByStore,
                     syncedAt,
                   );
-                  const totalAvailable = branchStocks.reduce(
-                    (total, item) => total + item.available,
+                  const totalAvailable = Math.max(
+                    branchStocks.reduce(
+                      (total, item) => total + item.available,
+                      0,
+                    ),
                     0,
                   );
 
@@ -190,7 +235,13 @@ const syncMoyskladProducts = async () => {
       await delay(CHUNK_DELAY_MS);
     }
 
-    console.log(`✅ Yakunlandi. ${updatedCount} ta narx yangilandi.`);
+    if (conflictedBarcodes.size) {
+      console.warn(
+        `MoySklad sync: ${conflictedBarcodes.size} ta duplicate barcode moyskladId yo'qligi sabab o'tkazib yuborildi`,
+      );
+    }
+
+    console.log(`✅ Yakunlandi. ${updatedCount} ta mahsulot yangilandi.`);
   } catch (error) {
     console.error("❌ Xato:", error.message);
   } finally {

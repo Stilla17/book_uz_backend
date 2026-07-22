@@ -22,6 +22,12 @@ const UNKNOWN_PUBLISHER = {
   description: null,
 };
 
+const getAuthorNames = (authors) =>
+  (Array.isArray(authors) ? authors : [authors])
+    .map((author) => author?.name)
+    .filter(Boolean)
+    .join(", ");
+
 const withDisplayFields = (product) => {
   const productObject =
     typeof product.toObject === 'function' ? product.toObject() : product;
@@ -31,8 +37,11 @@ const withDisplayFields = (product) => {
 
   return {
     ...productObject,
-    author: productObject.author || UNKNOWN_AUTHOR,
-    authorName: productObject.author?.name || "Noma'lum",
+    author:
+      Array.isArray(productObject.author) && productObject.author.length
+        ? productObject.author
+        : [UNKNOWN_AUTHOR],
+    authorName: getAuthorNames(productObject.author) || "Noma'lum",
     publisher: productObject.publisher || UNKNOWN_PUBLISHER,
     publisherName: productObject.publisher?.name || "Noma'lum",
     categoryName:

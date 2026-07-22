@@ -40,7 +40,11 @@ const hydrateProductRelations = async (products) => {
     );
 
   const missingAuthorIds = productObjects
-    .filter((product) => !product.author)
+    .filter(
+      (product) =>
+        !product.author ||
+        (Array.isArray(product.author) && product.author.length === 0),
+    )
     .map((product) => product._id)
     .filter(Boolean);
   const missingPublisherIds = productObjects
@@ -83,7 +87,9 @@ const hydrateProductRelations = async (products) => {
   const authorByBook = new Map();
   authors.forEach((author) => {
     (author.books || []).forEach((bookId) => {
-      authorByBook.set(bookId.toString(), author);
+      const productId = bookId.toString();
+      const productAuthors = authorByBook.get(productId) || [];
+      authorByBook.set(productId, [...productAuthors, author]);
     });
   });
 
@@ -100,9 +106,11 @@ const hydrateProductRelations = async (products) => {
     return {
       ...product,
       author:
-        product.author ||
+        (Array.isArray(product.author) && product.author.length
+          ? product.author
+          : null) ||
         authorByBook.get(productId) ||
-        normalizeEmbeddedRelation(rawProductById.get(productId)?.author),
+        normalizeEmbeddedRelationList(rawProductById.get(productId)?.author),
       publisher:
         product.publisher ||
         publisherByBook.get(productId) ||

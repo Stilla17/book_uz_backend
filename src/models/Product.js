@@ -36,6 +36,7 @@ const ProductSchema = new mongoose.Schema(
       },
     ],
     barcode: { type: String, trim: true, unique: true },
+    moyskladId: { type: String, trim: true, unique: true, sparse: true },
     ikpuCode: {
       type: String,
       trim: true,
@@ -58,9 +59,12 @@ const ProductSchema = new mongoose.Schema(
     subCategoryId: { type: mongoose.Schema.Types.ObjectId },
 
     author: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Author",
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
       required: true,
+      validate: {
+        validator: (authors) => Array.isArray(authors) && authors.length > 0,
+        message: "Kamida bitta muallif tanlanishi kerak",
+      },
     },
 
     publisher: {

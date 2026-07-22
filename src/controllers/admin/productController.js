@@ -27,6 +27,28 @@ const toTrimmedString = (value) => {
   return String(value).trim();
 };
 
+const normalizeAuthorIds = (value) => {
+  const parsedValue = parseMaybeJson(value);
+  const values = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+
+  return [
+    ...new Set(
+      values
+        .flatMap((item) =>
+          typeof item === "string" ? item.split(",") : [item],
+        )
+        .map(toTrimmedString)
+        .filter(Boolean),
+    ),
+  ];
+};
+
+const getAuthorNames = (authors) =>
+  (Array.isArray(authors) ? authors : [authors])
+    .map((author) => author?.name)
+    .filter(Boolean)
+    .join(", ");
+
 const normalizePayload = (payload = {}) => {
   const normalized = { ...payload };
 
@@ -35,6 +57,10 @@ const normalizePayload = (payload = {}) => {
     parseMaybeJson(payload.description) || payload.description;
   normalized.publisher =
     payload.publisher ?? payload.publish ?? payload.publisherId;
+
+  if (payload.author !== undefined) {
+    normalized.author = normalizeAuthorIds(payload.author);
+  }
 
   if (payload.isTop !== undefined) {
     normalized.isTop = parseBoolean(payload.isTop);
@@ -156,8 +182,18 @@ const syncBookRelations = async (
   const nextCategoryId = getIdString(nextProduct.category);
   const nextSubCategoryId = getIdString(nextProduct.subCategoryId);
 
-  const previousAuthorId = getIdString(previousProduct.author);
-  const nextAuthorId = getIdString(nextProduct.author);
+  const previousAuthorIds = (Array.isArray(previousProduct.author)
+    ? previousProduct.author
+    : [previousProduct.author]
+  )
+    .map(getIdString)
+    .filter(Boolean);
+  const nextAuthorIds = (Array.isArray(nextProduct.author)
+    ? nextProduct.author
+    : [nextProduct.author]
+  )
+    .map(getIdString)
+    .filter(Boolean);
 
   const previousPublisherId = getIdString(previousProduct.publisher);
   const nextPublisherId = getIdString(nextProduct.publisher);
@@ -187,19 +223,22 @@ const syncBookRelations = async (
     );
   }
 
-  if (previousAuthorId && previousAuthorId !== nextAuthorId) {
+  const removedAuthorIds = previousAuthorIds.filter(
+    (authorId) => !nextAuthorIds.includes(authorId),
+  );
+  if (removedAuthorIds.length) {
     updates.push(
-      Author.updateOne(
-        { _id: previousAuthorId },
+      Author.updateMany(
+        { _id: { $in: removedAuthorIds } },
         { $pull: { books: productId } },
       ),
     );
   }
 
-  if (nextAuthorId) {
+  if (nextAuthorIds.length) {
     updates.push(
-      Author.updateOne(
-        { _id: nextAuthorId },
+      Author.updateMany(
+        { _id: { $in: nextAuthorIds } },
         { $addToSet: { books: productId } },
       ),
     );
@@ -287,7 +326,7 @@ const getAllProducts = async (req, res, next) => {
       ...product.toObject(),
       categoryName:
         product.category?.title?.uz || product.category?.name?.uz || "Noma'lum",
-      authorName: product.author?.name || "Noma'lum",
+      authorName: getAuthorNames(product.author) || "Noma'lum",
       publisherName: product.publisher?.name || "Noma'lum",
     }));
 
@@ -324,7 +363,7 @@ const createProduct = async (req, res, next) => {
     if (!categoryId) {
       return apiResponse(res, 400, false, "category majburiy");
     }
-    if (!payload.author) {
+    if (!payload.author?.length) {
       return apiResponse(res, 400, false, "author majburiy");
     }
     if (!payload.publisher) {
@@ -421,6 +460,13 @@ const updateProduct = async (req, res, next) => {
 
     let product = await Product.findById(id);
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
+
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "author") &&
+      !payload.author.length
+    ) {
+      return apiResponse(res, 400, false, "Kamida bitta muallif tanlang");
+    }
 
     const updateData = { ...payload };
     const nextCategoryId = resolveCategoryId(payload) || product.category;
