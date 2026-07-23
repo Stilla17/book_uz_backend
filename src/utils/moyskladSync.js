@@ -150,27 +150,28 @@ const syncMoyskladProducts = async (options = {}) => {
           if (msBarcodeRaw) {
             const cleanMs = cleanBarcode(msBarcodeRaw);
             const localCandidates = barcodeLookup.get(cleanMs) || [];
-            let myMatch = localCandidates.find(
+            const linkedMatch = localCandidates.find(
               (product) => product.moyskladId === msProduct.id,
             );
+            const hasUniqueMoyskladBarcode =
+              msBarcodeCounts.get(cleanMs) === 1;
+            const localMatches = hasUniqueMoyskladBarcode
+              ? localCandidates.filter(
+                  (product) =>
+                    !product.moyskladId ||
+                    product.moyskladId === msProduct.id,
+                )
+              : linkedMatch
+                ? [linkedMatch]
+                : [];
 
-            if (
-              !myMatch &&
-              localCandidates.length === 1 &&
-              msBarcodeCounts.get(cleanMs) === 1 &&
-              !localCandidates[0].moyskladId
-            ) {
-              myMatch = localCandidates[0];
-            }
-
-            if (!myMatch && localCandidates.length) {
+            if (!localMatches.length && localCandidates.length) {
               conflictedBarcodes.add(cleanMs);
               continue;
             }
 
-            if (myMatch) {
+            if (localMatches.length) {
               const updateFields = {
-                moyskladId: msProduct.id,
                 ...(msPrice ? { price: msPrice } : {}),
               };
 
@@ -209,15 +210,26 @@ const syncMoyskladProducts = async (options = {}) => {
                 }
               }
 
-              // Har birini alohida update qilmasdan, ro'yxatga yig'amiz
-              if (Object.keys(updateFields).length > 0) {
+              localMatches.forEach((localMatch) => {
+                const matchUpdateFields = { ...updateFields };
+
+                // Duplicate lokal ISBN'larda bitta MoySklad ID'ni bir nechta
+                // productga yozib bo'lmaydi. Narx/qoldiq barchasiga yoziladi,
+                // ID esa faqat aniq bitta moslik bo'lganda biriktiriladi.
+                if (
+                  localMatch.moyskladId === msProduct.id ||
+                  localMatches.length === 1
+                ) {
+                  matchUpdateFields.moyskladId = msProduct.id;
+                }
+
                 bulkOps.push({
                   updateOne: {
-                    filter: { _id: myMatch.id },
-                    update: { $set: updateFields },
+                    filter: { _id: localMatch.id },
+                    update: { $set: matchUpdateFields },
                   },
                 });
-              }
+              });
 
               await delay(STOCK_REQUEST_DELAY_MS);
             }

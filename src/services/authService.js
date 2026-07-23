@@ -51,7 +51,7 @@ const validateRegistrationBirthDate = (value) => {
 
   if (birthDate > getMaximumBirthDate()) {
     throw createBadRequestError(
-      "Bunday sana kiritish mumkin emas. Yosh kamida 12 bo'lishi kerak",
+      "Aniq yoshingizni kiriting",
     );
   }
 

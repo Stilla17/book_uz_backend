@@ -20,6 +20,7 @@ const {
 } = require("../../utils/subgenreMatcher");
 const { getIdString } = require("../../utils/categoryView");
 const { parseMaybeJson, parseBoolean } = require("../../utils/parsing");
+const { cleanBarcode } = require("../../utils/moyskladClient");
 
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
@@ -58,6 +59,10 @@ const normalizePayload = (payload = {}) => {
   normalized.publisher =
     payload.publisher ?? payload.publish ?? payload.publisherId;
 
+  if (payload.barcode !== undefined) {
+    normalized.barcode = toTrimmedString(payload.barcode);
+  }
+
   if (payload.author !== undefined) {
     normalized.author = normalizeAuthorIds(payload.author);
   }
@@ -87,6 +92,24 @@ const validatePublisher = async (publisherId) => {
   }
 
   return { publisherId: publisher._id };
+};
+
+const findDuplicateBarcode = (barcode, excludeProductId) => {
+  const normalizedBarcode = toTrimmedString(barcode);
+  if (!normalizedBarcode) return null;
+
+  const barcodeDigits = cleanBarcode(normalizedBarcode);
+  const normalizedPattern = barcodeDigits
+    ? `^${barcodeDigits.split("").join("\\D*")}$`
+    : `^${normalizedBarcode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
+  const filter = {
+    barcode: { $regex: new RegExp(normalizedPattern) },
+  };
+  if (excludeProductId) {
+    filter._id = { $ne: excludeProductId };
+  }
+
+  return Product.findOne(filter).select("_id title slug");
 };
 
 const buildProductSearchFilters = async (keyword) => {
@@ -370,6 +393,17 @@ const createProduct = async (req, res, next) => {
       return apiResponse(res, 400, false, "publisher majburiy");
     }
 
+    const duplicateBarcode = await findDuplicateBarcode(payload.barcode);
+    if (duplicateBarcode) {
+      return apiResponse(
+        res,
+        409,
+        false,
+        "Bu ISBN bilan kitob bazada allaqachon mavjud",
+        { productId: duplicateBarcode._id, slug: duplicateBarcode.slug },
+      );
+    }
+
     const subCategoryId = resolveSubCategoryId(payload);
     const categoryValidation = await validateCategorySubgenre(
       categoryId,
@@ -460,6 +494,22 @@ const updateProduct = async (req, res, next) => {
 
     let product = await Product.findById(id);
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
+
+    if (
+      payload.barcode &&
+      payload.barcode !== toTrimmedString(product.barcode)
+    ) {
+      const duplicateBarcode = await findDuplicateBarcode(payload.barcode, id);
+      if (duplicateBarcode) {
+        return apiResponse(
+          res,
+          409,
+          false,
+          "Bu ISBN bilan boshqa kitob bazada mavjud",
+          { productId: duplicateBarcode._id, slug: duplicateBarcode.slug },
+        );
+      }
+    }
 
     if (
       Object.prototype.hasOwnProperty.call(payload, "author") &&

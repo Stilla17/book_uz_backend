@@ -17,6 +17,7 @@ const {
 const TOKEN = process.env.MOYSKLAD_API_KEY || process.env.MOYSKLAD_TOKEN;
 const TOP_LIMIT = 10;
 const REQUEST_LIMIT = 100;
+const REQUEST_CONCURRENCY = 3;
 
 let isSyncingTopSales = false;
 
@@ -39,11 +40,8 @@ const getPeriodRange = (period) => {
 };
 
 const fetchAllRows = async (url, params, label) => {
-  const rows = [];
-  let offset = 0;
-
-  while (true) {
-    const response = await requestWithRetry(
+  const fetchPage = (offset) =>
+    requestWithRetry(
       () =>
         axios.get(url, {
           headers,
@@ -53,14 +51,36 @@ const fetchAllRows = async (url, params, label) => {
       label,
     );
 
-    const chunk = response?.data?.rows || [];
-    rows.push(...chunk);
+  const firstResponse = await fetchPage(0);
+  const firstRows = firstResponse?.data?.rows || [];
+  const total = Number(firstResponse?.data?.meta?.size);
 
-    if (chunk.length < REQUEST_LIMIT) break;
-    offset += REQUEST_LIMIT;
+  if (!Number.isFinite(total) || total <= firstRows.length) {
+    return firstRows;
   }
 
-  return rows;
+  const offsets = [];
+  for (let offset = REQUEST_LIMIT; offset < total; offset += REQUEST_LIMIT) {
+    offsets.push(offset);
+  }
+
+  const pages = new Array(offsets.length);
+  let nextPageIndex = 0;
+
+  const workers = Array.from(
+    { length: Math.min(REQUEST_CONCURRENCY, offsets.length) },
+    async () => {
+      while (nextPageIndex < offsets.length) {
+        const pageIndex = nextPageIndex;
+        nextPageIndex += 1;
+        const response = await fetchPage(offsets[pageIndex]);
+        pages[pageIndex] = response?.data?.rows || [];
+      }
+    },
+  );
+
+  await Promise.all(workers);
+  return [firstRows, ...pages].flat();
 };
 
 const fetchDemands = ({ from, to }) =>
@@ -71,7 +91,7 @@ const fetchDemands = ({ from, to }) =>
         `moment>=${formatMoyskladDate(from)}`,
         `moment<=${formatMoyskladDate(to, true)}`,
       ].join(";"),
-      expand: "positions.assortment",
+      expand: "positions",
     },
     "MoySklad demand so'rovi",
   );
@@ -79,81 +99,140 @@ const fetchDemands = ({ from, to }) =>
 const fetchDemandPositions = (demandId) =>
   fetchAllRows(
     `${MOYSKLAD_BASE_URL}/entity/demand/${demandId}/positions`,
-    { expand: "assortment" },
+    {},
     "MoySklad demand positions so'rovi",
   );
 
 const buildLocalProductLookup = async () => {
   const products = await Product.find(
-    { barcode: { $exists: true, $ne: "" }, isActive: true },
-    "barcode",
+    {
+      isActive: true,
+      $or: [
+        { moyskladId: { $exists: true, $ne: "" } },
+        { barcode: { $exists: true, $ne: "" } },
+      ],
+    },
+    "barcode moyskladId",
   ).lean();
-  const lookup = new Map();
+  const byBarcode = new Map();
+  const byMoyskladId = new Map();
 
   products.forEach((product) => {
     const barcode = cleanBarcode(product.barcode);
-    if (barcode) lookup.set(barcode, product._id);
+    if (barcode) byBarcode.set(barcode, product._id);
+    if (product.moyskladId) {
+      byMoyskladId.set(product.moyskladId, product._id);
+    }
   });
 
-  return lookup;
+  return { byBarcode, byMoyskladId };
 };
 
-const calculateTopSales = async (period) => {
+const getAssortmentId = (assortment = {}) => {
+  if (assortment.id) return assortment.id;
+
+  const href = assortment.meta?.href;
+  if (!href) return "";
+
+  return href.split("/").filter(Boolean).pop() || "";
+};
+
+const getDemandPositions = async (demand) => {
+  const embeddedRows = demand.positions?.rows;
+  const total = Number(demand.positions?.meta?.size);
+
+  if (
+    Array.isArray(embeddedRows) &&
+    (!Number.isFinite(total) || embeddedRows.length >= total)
+  ) {
+    return embeddedRows;
+  }
+
+  return fetchDemandPositions(demand.id);
+};
+
+const calculateTopSalesPeriods = async (periods) => {
   if (!TOKEN) {
     throw new Error(
       "MOYSKLAD_API_KEY yoki MOYSKLAD_TOKEN .env faylida topilmadi",
     );
   }
 
-  const { from, to } = getPeriodRange(period);
-  const localProductsByBarcode = await buildLocalProductLookup();
+  const ranges = Object.fromEntries(
+    periods.map((period) => [period, getPeriodRange(period)]),
+  );
+  const fetchPeriod = periods.includes("month") ? "month" : "week";
+  const { from, to } = ranges[fetchPeriod];
+  const localProducts = await buildLocalProductLookup();
   const demands = await fetchDemands({ from, to });
-  const salesByProduct = new Map();
+  const salesByPeriod = Object.fromEntries(
+    periods.map((period) => [period, new Map()]),
+  );
 
   for (const demand of demands) {
-    const positions =
-      demand.positions?.rows || (await fetchDemandPositions(demand.id));
+    const positions = await getDemandPositions(demand);
+    const demandMoment = new Date(String(demand.moment).replace(" ", "T"));
 
     for (const position of positions) {
-      const barcode = getMoyskladBarcode(position.assortment || {});
-      if (!barcode) continue;
+      const assortment = position.assortment || {};
+      const moyskladId = getAssortmentId(assortment);
+      const barcode = getMoyskladBarcode(assortment);
+      const productId =
+        localProducts.byMoyskladId.get(moyskladId) ||
+        localProducts.byBarcode.get(barcode);
 
-      const productId = localProductsByBarcode.get(barcode);
       if (!productId) continue;
 
-      const key = productId.toString();
-      const current = salesByProduct.get(key) || {
-        product: productId,
-        barcode,
-        soldQuantity: 0,
-      };
+      for (const period of periods) {
+        if (demandMoment < ranges[period].from) continue;
 
-      current.soldQuantity += Number(position.quantity || 0);
-      salesByProduct.set(key, current);
+        const salesByProduct = salesByPeriod[period];
+        const key = productId.toString();
+        const current = salesByProduct.get(key) || {
+          product: productId,
+          barcode,
+          soldQuantity: 0,
+        };
+
+        current.soldQuantity += Number(position.quantity || 0);
+        salesByProduct.set(key, current);
+      }
     }
   }
 
-  const products = [...salesByProduct.values()]
-    .sort((a, b) => b.soldQuantity - a.soldQuantity)
-    .slice(0, TOP_LIMIT);
-
-  return { period, from, to, products, syncedAt: new Date() };
+  const syncedAt = new Date();
+  return periods.map((period) => ({
+    period,
+    ...ranges[period],
+    products: [...salesByPeriod[period].values()]
+      .sort((a, b) => b.soldQuantity - a.soldQuantity)
+      .slice(0, TOP_LIMIT),
+    syncedAt,
+  }));
 };
 
-const syncTopSalesPeriod = async (period) => {
-  const data = await calculateTopSales(period);
-
-  await MoyskladTopSales.findOneAndUpdate(
-    { period },
-    { $set: data },
-    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+const saveTopSales = async (data) => {
+  await Promise.all(
+    data.map((periodData) =>
+      MoyskladTopSales.findOneAndUpdate(
+        { period: periodData.period },
+        { $set: periodData },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+      ),
+    ),
   );
 
-  console.log(
-    `MoySklad ${period} top sales sync: ${data.products.length} ta kitob`,
-  );
+  data.forEach((periodData) => {
+    console.log(
+      `MoySklad ${periodData.period} top sales sync: ${periodData.products.length} ta kitob`,
+    );
+  });
+
   return data;
 };
+
+const syncTopSalesPeriod = async (period) =>
+  saveTopSales(await calculateTopSalesPeriods([period]));
 
 const syncMoyskladTopSales = async () => {
   if (isSyncingTopSales) {
@@ -164,8 +243,7 @@ const syncMoyskladTopSales = async () => {
   isSyncingTopSales = true;
 
   try {
-    await syncTopSalesPeriod("week");
-    await syncTopSalesPeriod("month");
+    await saveTopSales(await calculateTopSalesPeriods(["week", "month"]));
   } catch (error) {
     const status = getAxiosStatus(error);
     const message = getMoyskladErrorMessage(error);
