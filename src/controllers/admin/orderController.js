@@ -364,7 +364,10 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     order.status = status;
     
-    if (status === 'DELIVERED' && order.paymentType === 'CASH') {
+    if (
+      order.paymentType === 'CASH' &&
+      ['CONFIRMED', 'DELIVERED'].includes(status)
+    ) {
       order.paymentStatus = 'PAID';
     }
 

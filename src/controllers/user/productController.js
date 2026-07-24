@@ -6,6 +6,7 @@ const apiResponse = require('../../utils/apiResponse');
 const hydrateProductRelations = require('../../utils/hydrateProductRelations');
 const { applyActiveDiscountsToProducts } = require('../../utils/productDiscounts');
 const { buildSearchPattern, buildSearchRegex } = require('../../utils/searchRegex');
+const slugify = require('../../utils/slugify');
 
 const CATEGORY_SELECT = 'name title subgenres';
 const UNKNOWN_AUTHOR = {
@@ -453,7 +454,7 @@ exports.getProductById = async (req, res, next) => {
     if (id.match(/^[0-9a-fA-F]{24}$/)) {
       query = { _id: id, isActive: true };
     } else {
-      query = { slug: id, isActive: true };
+      query = { slug: slugify(id), isActive: true };
     }
 
     const product = await Product.findOne(query)

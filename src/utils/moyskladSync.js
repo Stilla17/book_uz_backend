@@ -5,8 +5,6 @@ const {
   delay,
   getMoyskladBaseUrl,
   moyskladHeaders,
-  cleanBarcode,
-  getMoyskladBarcode,
   getAxiosStatus,
   logMoyskladError,
   requestWithRetry,
@@ -14,6 +12,7 @@ const {
 
 const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
+const ASSORTMENT_CHUNK_SIZE = 50;
 const FIVE_HOURS_IN_MS = 5 * 60 * 60 * 1000;
 
 let isSyncing = false;
@@ -68,6 +67,64 @@ const fetchAssortmentChunk = async (filterString) =>
     "MoySklad assortment so'rovi",
   );
 
+const fetchAssortmentByField = async (field, values) => {
+  const uniqueValues = [...new Set(values.filter(Boolean))];
+  const rows = [];
+
+  for (let i = 0; i < uniqueValues.length; i += ASSORTMENT_CHUNK_SIZE) {
+    const chunk = uniqueValues.slice(i, i + ASSORTMENT_CHUNK_SIZE);
+    const filterString = chunk.map((value) => `${field}=${value}`).join(";");
+    const response = await fetchAssortmentChunk(filterString);
+
+    rows.push(...(response?.data?.rows || []));
+
+    if (i + ASSORTMENT_CHUNK_SIZE < uniqueValues.length) {
+      await delay(CHUNK_DELAY_MS);
+    }
+  }
+
+  return rows;
+};
+
+const groupByExternalCode = (assortmentRows) => {
+  const result = new Map();
+
+  assortmentRows.forEach((assortment) => {
+    if (!assortment.externalCode) return;
+
+    const matches = result.get(assortment.externalCode) || [];
+    matches.push(assortment);
+    result.set(assortment.externalCode, matches);
+  });
+
+  return result;
+};
+
+const ensureBookuzExternalCode = async (assortment, bookuzId) => {
+  if (assortment.externalCode === bookuzId) {
+    return false;
+  }
+
+  if (!assortment.meta?.href) {
+    throw new Error(
+      `MoySklad meta.href topilmadi (${assortment.id || bookuzId})`,
+    );
+  }
+
+  await requestWithRetry(
+    () =>
+      axios.put(
+        assortment.meta.href,
+        { externalCode: bookuzId },
+        { headers, timeout: 30000 },
+      ),
+    `MoySklad externalCode yangilash (${assortment.id})`,
+  );
+
+  assortment.externalCode = bookuzId;
+  return true;
+};
+
 const syncMoyskladProducts = async (options = {}) => {
   if (isSyncing) {
     console.log("MoySklad sinxronizatsiyasi hali davom etmoqda");
@@ -77,185 +134,170 @@ const syncMoyskladProducts = async (options = {}) => {
   isSyncing = true;
 
   try {
-    console.log("🔄 Sinxronizatsiya boshlandi...");
+    console.log("MoySklad mahsulot sinxronizatsiyasi boshlandi...");
 
-    const requestedBarcodes = new Set(
-      (options.barcodes || []).map(cleanBarcode).filter(Boolean),
-    );
-
-    // 1. Bazadan ma'lumotni olamiz
+    const productFilter = options.productIds?.length
+      ? { _id: { $in: options.productIds } }
+      : {};
     const myProducts = await Product.find(
-      {},
-      "barcode price moyskladId title",
+      productFilter,
+      "_id price moyskladId title",
     ).lean();
 
-    // 2. Map yaratamiz (Qidiruvni million marta tezlashtiradi)
-    // Kalit sifatida tozalangan barcodeni saqlaymiz
-    const barcodeLookup = new Map();
-    myProducts.forEach((p) => {
-      if (p.barcode) {
-        const clean = cleanBarcode(p.barcode);
-        if (requestedBarcodes.size && !requestedBarcodes.has(clean)) return;
+    if (!myProducts.length) {
+      console.log("MoySklad sync: Book.uz bazasida mahsulot topilmadi");
+      return;
+    }
 
-        const products = barcodeLookup.get(clean) || [];
-        products.push({
-          id: p._id,
-          moyskladId: p.moyskladId || "",
-          originalBarcode: p.barcode,
-          title: p.title,
-        });
-        barcodeLookup.set(clean, products);
+    // Asosiy bog'lanish faqat MoySklad UUID orqali qilinadi.
+    const linkedRows = await fetchAssortmentByField(
+      "id",
+      myProducts.map((product) => product.moyskladId),
+    );
+    const assortmentById = new Map(
+      linkedRows.map((assortment) => [assortment.id, assortment]),
+    );
+
+    // moyskladId yo'qolgan yoki hali yozilmagan mahsulotlarni faqat Book.uz
+    // _id saqlangan externalCode orqali tiklaymiz. ISBN/barcode ishlatilmaydi.
+    const unresolvedProducts = myProducts.filter(
+      (product) =>
+        !product.moyskladId || !assortmentById.has(product.moyskladId),
+    );
+    const externalCodeRows = await fetchAssortmentByField(
+      "externalCode",
+      unresolvedProducts.map((product) => product._id.toString()),
+    );
+    const assortmentByExternalCode = groupByExternalCode(externalCodeRows);
+    const claimedMoyskladIds = new Map();
+    const resolvedProducts = [];
+    const conflictedExternalCodes = new Set();
+
+    myProducts.forEach((product) => {
+      const bookuzId = product._id.toString();
+      let assortment = product.moyskladId
+        ? assortmentById.get(product.moyskladId)
+        : null;
+
+      if (!assortment) {
+        const externalCodeMatches =
+          assortmentByExternalCode.get(bookuzId) || [];
+
+        if (externalCodeMatches.length > 1) {
+          conflictedExternalCodes.add(bookuzId);
+          return;
+        }
+
+        assortment = externalCodeMatches[0];
       }
+
+      if (!assortment) return;
+
+      const claimedBy = claimedMoyskladIds.get(assortment.id);
+      if (claimedBy && claimedBy !== bookuzId) {
+        conflictedExternalCodes.add(bookuzId);
+        conflictedExternalCodes.add(claimedBy);
+        return;
+      }
+
+      claimedMoyskladIds.set(assortment.id, bookuzId);
+      resolvedProducts.push({ product, assortment, bookuzId });
     });
 
-    const myCleanBarcodes = Array.from(barcodeLookup.keys());
-    if (myCleanBarcodes.length === 0) return;
-
-    let updatedCount = 0;
-    const chunkSize = 50;
+    let synchronizedCount = 0;
+    let externalCodeUpdatedCount = 0;
     let canSyncBranchStocks = true;
-    const conflictedBarcodes = new Set();
+    const bulkOps = [];
 
-    for (let i = 0; i < myCleanBarcodes.length; i += chunkSize) {
-      const chunk = myCleanBarcodes.slice(i, i + chunkSize);
-      const filterString = chunk.map((bc) => `barcode=${bc}`).join(";");
-
-      let response;
-
+    for (const { product, assortment, bookuzId } of resolvedProducts) {
       try {
-        response = await fetchAssortmentChunk(filterString);
-      } catch (assortmentError) {
-        logMoyskladError("MoySklad assortment sync xatosi", assortmentError);
-        break;
+        const externalCodeUpdated = await ensureBookuzExternalCode(
+          assortment,
+          bookuzId,
+        );
+        if (externalCodeUpdated) externalCodeUpdatedCount += 1;
+      } catch (externalCodeError) {
+        logMoyskladError(
+          `MoySklad externalCode sync xatosi (${assortment.id})`,
+          externalCodeError,
+        );
       }
 
-      const msProducts = response.data.rows;
+      const salePriceValue = assortment.salePrices?.[0]?.value;
+      const numericSalePrice = Number(salePriceValue);
+      const updateFields = {
+        moyskladId: assortment.id,
+        ...(salePriceValue !== null &&
+        salePriceValue !== undefined &&
+        Number.isFinite(numericSalePrice) &&
+        numericSalePrice > 0
+          ? { price: numericSalePrice / 100 }
+          : {}),
+      };
 
-      if (msProducts && msProducts.length > 0) {
-        const msBarcodeCounts = new Map();
-        msProducts.forEach((msProduct) => {
-          const barcode = cleanBarcode(getMoyskladBarcode(msProduct));
-          if (!barcode) return;
-          msBarcodeCounts.set(barcode, (msBarcodeCounts.get(barcode) || 0) + 1);
-        });
+      if (canSyncBranchStocks) {
+        try {
+          const syncedAt = new Date();
+          const stockByStore = await fetchBranchStocks(assortment.meta?.href);
+          const branchStocks = buildBranchStocks(stockByStore, syncedAt);
+          const totalAvailable = Math.max(
+            branchStocks.reduce(
+              (total, item) => total + item.available,
+              0,
+            ),
+            0,
+          );
 
-        // 🚀 ENDI BULK (OMMAVIY) YANGILASH TAYYORLAYMIZ
-        const bulkOps = [];
+          updateFields.stock = totalAvailable;
+          updateFields.branchStocks = branchStocks;
+        } catch (stockError) {
+          logMoyskladError(
+            `MoySklad qoldiq sync xatosi (${assortment.id})`,
+            stockError,
+          );
 
-        for (const msProduct of msProducts) {
-          const msBarcodeRaw = getMoyskladBarcode(msProduct);
-          const msPrice =
-            msProduct.salePrices && msProduct.salePrices[0]?.value / 100;
-
-          if (msBarcodeRaw) {
-            const cleanMs = cleanBarcode(msBarcodeRaw);
-            const localCandidates = barcodeLookup.get(cleanMs) || [];
-            const linkedMatch = localCandidates.find(
-              (product) => product.moyskladId === msProduct.id,
+          if (getAxiosStatus(stockError) === 403) {
+            canSyncBranchStocks = false;
+            console.error(
+              "MoySklad tokenida report/stock/bystore uchun ruxsat yo'q. Narx sync davom etadi, branchStocks yangilanmaydi.",
             );
-            const hasUniqueMoyskladBarcode =
-              msBarcodeCounts.get(cleanMs) === 1;
-            const localMatches = hasUniqueMoyskladBarcode
-              ? localCandidates.filter(
-                  (product) =>
-                    !product.moyskladId ||
-                    product.moyskladId === msProduct.id,
-                )
-              : linkedMatch
-                ? [linkedMatch]
-                : [];
-
-            if (!localMatches.length && localCandidates.length) {
-              conflictedBarcodes.add(cleanMs);
-              continue;
-            }
-
-            if (localMatches.length) {
-              const updateFields = {
-                ...(msPrice ? { price: msPrice } : {}),
-              };
-
-              if (canSyncBranchStocks) {
-                try {
-                  const syncedAt = new Date();
-                  const stockByStore = await fetchBranchStocks(
-                    msProduct.meta?.href,
-                  );
-                  const branchStocks = buildBranchStocks(
-                    stockByStore,
-                    syncedAt,
-                  );
-                  const totalAvailable = Math.max(
-                    branchStocks.reduce(
-                      (total, item) => total + item.available,
-                      0,
-                    ),
-                    0,
-                  );
-
-                  updateFields.stock = totalAvailable;
-                  updateFields.branchStocks = branchStocks;
-                } catch (stockError) {
-                  logMoyskladError(
-                    `MoySklad qoldiq sync xatosi (${msBarcodeRaw})`,
-                    stockError,
-                  );
-
-                  if (getAxiosStatus(stockError) === 403) {
-                    canSyncBranchStocks = false;
-                    console.error(
-                      "MoySklad tokenida report/stock/bystore uchun ruxsat yo'q. Narx sync davom etadi, branchStocks yangilanmaydi.",
-                    );
-                  }
-                }
-              }
-
-              localMatches.forEach((localMatch) => {
-                const matchUpdateFields = { ...updateFields };
-
-                // Duplicate lokal ISBN'larda bitta MoySklad ID'ni bir nechta
-                // productga yozib bo'lmaydi. Narx/qoldiq barchasiga yoziladi,
-                // ID esa faqat aniq bitta moslik bo'lganda biriktiriladi.
-                if (
-                  localMatch.moyskladId === msProduct.id ||
-                  localMatches.length === 1
-                ) {
-                  matchUpdateFields.moyskladId = msProduct.id;
-                }
-
-                bulkOps.push({
-                  updateOne: {
-                    filter: { _id: localMatch.id },
-                    update: { $set: matchUpdateFields },
-                  },
-                });
-              });
-
-              await delay(STOCK_REQUEST_DELAY_MS);
-            }
           }
         }
 
-        // 3. Bir martada hamma o'zgarganlarni bazaga jo'natamiz (Juda tez!)
-        if (bulkOps.length > 0) {
-          const res = await Product.bulkWrite(bulkOps);
-          updatedCount += res.modifiedCount;
-        }
+        await delay(STOCK_REQUEST_DELAY_MS);
       }
 
-      // MoySklad va Protsessorga dam beramiz
-      await delay(CHUNK_DELAY_MS);
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: product._id },
+          update: { $set: updateFields },
+        },
+      });
+      synchronizedCount += 1;
     }
 
-    if (conflictedBarcodes.size) {
+    if (bulkOps.length) {
+      await Product.bulkWrite(bulkOps);
+    }
+
+    if (conflictedExternalCodes.size) {
       console.warn(
-        `MoySklad sync: ${conflictedBarcodes.size} ta duplicate barcode moyskladId yo'qligi sabab o'tkazib yuborildi`,
+        `MoySklad sync: ${conflictedExternalCodes.size} ta externalCode konflikti sabab o'tkazib yuborildi`,
       );
     }
 
-    console.log(`✅ Yakunlandi. ${updatedCount} ta mahsulot yangilandi.`);
+    const unlinkedCount = myProducts.length - synchronizedCount;
+    if (unlinkedCount) {
+      console.warn(
+        `MoySklad sync: ${unlinkedCount} ta mahsulotda moyskladId yoki mos externalCode topilmadi`,
+      );
+    }
+
+    console.log(
+      `MoySklad sync yakunlandi. ${synchronizedCount} ta mahsulot sinxronlandi, ${externalCodeUpdatedCount} ta externalCode Book.uz ID bilan yangilandi.`,
+    );
   } catch (error) {
-    console.error("❌ Xato:", error.message);
+    logMoyskladError("MoySklad mahsulot sync xatosi", error);
   } finally {
     isSyncing = false;
   }

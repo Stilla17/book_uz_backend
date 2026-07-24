@@ -2,26 +2,30 @@ const axios = require("axios");
 const AmoContact = require("../models/AmoContact");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const { isValidPhone } = require("../utils/validator");
+const {
+  getMoyskladBaseUrl,
+  moyskladHeaders,
+  requestWithRetry,
+} = require("../utils/moyskladClient");
 
-const DEFAULT_BASE_URL = "https://api.moysklad.ru/api/remap/1.2";
 const PAGE_SIZE = 1000;
+const MOYSKLAD_BASE_URL = getMoyskladBaseUrl();
+const headers = moyskladHeaders(
+  process.env.MOYSKLAD_API_KEY || process.env.MOYSKLAD_TOKEN,
+);
 
 const normalizeEmail = (email) => email?.toString().trim().toLowerCase() || "";
 
-function getBaseUrl() {
-  const configuredUrl = process.env.MOYSKLAD_API_URL;
-
-  if (!configuredUrl) return DEFAULT_BASE_URL;
-
-  const marker = "/api/remap/1.2";
-  const markerIndex = configuredUrl.indexOf(marker);
-
-  if (markerIndex === -1) {
-    return configuredUrl.replace(/\/entity\/.*$/, "");
-  }
-
-  return configuredUrl.slice(0, markerIndex + marker.length);
-}
+const fetchMoyskladPage = (url, params, label) =>
+  requestWithRetry(
+    () =>
+      axios.get(url, {
+        headers,
+        params,
+        timeout: 30000,
+      }),
+    label,
+  );
 
 function isCustomer(counterparty) {
   return (counterparty.tags || []).some(
@@ -51,19 +55,13 @@ async function getAllMoyskladCustomers() {
   let offset = 0;
 
   while (true) {
-    const { data } = await axios.get(
-      `${getBaseUrl()}/entity/counterparty`,
+    const { data } = await fetchMoyskladPage(
+      `${MOYSKLAD_BASE_URL}/entity/counterparty`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.MOYSKLAD_API_KEY}`,
-          "Cache-Control": "no-cache",
-        },
-        params: {
-          limit: PAGE_SIZE,
-          offset,
-        },
-        timeout: 30000,
+        limit: PAGE_SIZE,
+        offset,
       },
+      "MoySklad xaridorlar so'rovi",
     );
 
     const rows = data.rows || [];
@@ -81,19 +79,13 @@ async function getCounterpartyStats() {
   let offset = 0;
 
   while (true) {
-    const { data } = await axios.get(
-      `${getBaseUrl()}/report/counterparty`,
+    const { data } = await fetchMoyskladPage(
+      `${MOYSKLAD_BASE_URL}/report/counterparty`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.MOYSKLAD_API_KEY}`,
-          "Cache-Control": "no-cache",
-        },
-        params: {
-          limit: PAGE_SIZE,
-          offset,
-        },
-        timeout: 30000,
+        limit: PAGE_SIZE,
+        offset,
       },
+      "MoySklad xaridorlar statistikasi so'rovi",
     );
 
     const rows = data.rows || [];
@@ -118,19 +110,13 @@ async function getCustomerOrderStats() {
   let offset = 0;
 
   while (true) {
-    const { data } = await axios.get(
-      `${getBaseUrl()}/entity/customerorder`,
+    const { data } = await fetchMoyskladPage(
+      `${MOYSKLAD_BASE_URL}/entity/customerorder`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.MOYSKLAD_API_KEY}`,
-          "Cache-Control": "no-cache",
-        },
-        params: {
-          limit: PAGE_SIZE,
-          offset,
-        },
-        timeout: 30000,
+        limit: PAGE_SIZE,
+        offset,
       },
+      "MoySklad xaridor buyurtmalari so'rovi",
     );
 
     const rows = data.rows || [];

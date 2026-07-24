@@ -3,6 +3,18 @@ const User = require('../../models/User');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 
+const CASH_REVENUE_STATUSES = ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'];
+const REVENUE_ORDER_MATCH = {
+  status: { $ne: 'CANCELLED' },
+  $or: [
+    { paymentStatus: 'PAID' },
+    {
+      paymentType: 'CASH',
+      status: { $in: CASH_REVENUE_STATUSES },
+    },
+  ],
+};
+
 /**
  * 1. Asosiy Statistika (Summary Stats)
  * Bugungi savdo, umumiy foyda va asosiy counterlar
@@ -22,11 +34,11 @@ const getStats = async (req, res, next) => {
         Product.countDocuments({ stock: { $lt: 5 } }) 
       ]),
       Order.aggregate([
-        { $match: { createdAt: { $gte: startOfToday }, paymentStatus: 'PAID', status: { $ne: 'CANCELLED' } } },
+        { $match: { ...REVENUE_ORDER_MATCH, createdAt: { $gte: startOfToday } } },
         { $group: { _id: null, total: { $sum: "$totalAmount" } } }
       ]),
       Order.aggregate([
-        { $match: { paymentStatus: 'PAID', status: { $ne: 'CANCELLED' } } },
+        { $match: REVENUE_ORDER_MATCH },
         { $group: { _id: null, total: { $sum: "$totalAmount" } } }
       ])
     ]);
@@ -58,7 +70,7 @@ const getSalesChartData = async (req, res, next) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const chartData = await Order.aggregate([
-      { $match: { createdAt: { $gte: sevenDaysAgo }, paymentStatus: 'PAID' } },
+      { $match: { ...REVENUE_ORDER_MATCH, createdAt: { $gte: sevenDaysAgo } } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
@@ -80,6 +92,7 @@ const getSalesChartData = async (req, res, next) => {
 const getTopProducts = async (req, res, next) => {
   try {
     const topProducts = await Order.aggregate([
+      { $match: REVENUE_ORDER_MATCH },
       { $unwind: "$items" },
       {
         $group: {

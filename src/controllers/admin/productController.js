@@ -112,6 +112,17 @@ const findDuplicateBarcode = (barcode, excludeProductId) => {
   return Product.findOne(filter).select("_id title slug");
 };
 
+const findDuplicateSlug = (slug, excludeProductId) => {
+  if (!slug) return null;
+
+  const filter = { slug };
+  if (excludeProductId) {
+    filter._id = { $ne: excludeProductId };
+  }
+
+  return Product.findOne(filter).select("_id title slug");
+};
+
 const buildProductSearchFilters = async (keyword) => {
   const searchRegex = buildSearchRegex(keyword);
   const [authors, publishers] = await Promise.all([
@@ -420,7 +431,26 @@ const createProduct = async (req, res, next) => {
       return apiResponse(res, 400, false, publisherValidation.error);
     }
 
-    const slug = slugify(title.uz);
+    const slug = slugify(payload.slug || title.uz);
+    if (!slug) {
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Slug bo'sh bo'lishi mumkin emas",
+      );
+    }
+
+    const duplicateSlug = await findDuplicateSlug(slug);
+    if (duplicateSlug) {
+      return apiResponse(
+        res,
+        409,
+        false,
+        "Bu slug bilan kitob bazada allaqachon mavjud",
+        { productId: duplicateSlug._id, slug: duplicateSlug.slug },
+      );
+    }
 
     const priceNum = Number(price);
     const discountNum = Number(discountPrice || 0);
@@ -557,8 +587,30 @@ const updateProduct = async (req, res, next) => {
     delete updateData.publish;
     delete updateData.publisherId;
 
-    if (title && title.uz) {
-      updateData.slug = slugify(title.uz);
+    const hasSlugField = Object.prototype.hasOwnProperty.call(req.body, "slug");
+    if (hasSlugField || (title && title.uz)) {
+      const nextSlug = slugify(hasSlugField ? payload.slug : title.uz);
+      if (!nextSlug) {
+        return apiResponse(
+          res,
+          400,
+          false,
+          "Slug bo'sh bo'lishi mumkin emas",
+        );
+      }
+
+      const duplicateSlug = await findDuplicateSlug(nextSlug, id);
+      if (duplicateSlug) {
+        return apiResponse(
+          res,
+          409,
+          false,
+          "Bu slug bilan boshqa kitob bazada mavjud",
+          { productId: duplicateSlug._id, slug: duplicateSlug.slug },
+        );
+      }
+
+      updateData.slug = nextSlug;
     }
 
     if (price || discountPrice) {

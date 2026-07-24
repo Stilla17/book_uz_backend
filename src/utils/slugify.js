@@ -1,22 +1,57 @@
+const CYRILLIC_TO_LATIN = {
+  а: "a",
+  б: "b",
+  в: "v",
+  г: "g",
+  ғ: "g",
+  д: "d",
+  е: "e",
+  ё: "yo",
+  ж: "j",
+  з: "z",
+  и: "i",
+  й: "y",
+  к: "k",
+  қ: "q",
+  л: "l",
+  м: "m",
+  н: "n",
+  о: "o",
+  п: "p",
+  р: "r",
+  с: "s",
+  т: "t",
+  у: "u",
+  ў: "o",
+  ф: "f",
+  х: "x",
+  ҳ: "h",
+  ц: "ts",
+  ч: "ch",
+  ш: "sh",
+  щ: "shch",
+  ъ: "",
+  ы: "y",
+  ь: "",
+  э: "e",
+  ю: "yu",
+  я: "ya",
+};
+
 const slugify = (text) => {
-  if (!text) return '';
-  
-  const uzbekChars = {
-    'o‘': 'o', 'o\'': 'o', 'g‘': 'g', 'g\'': 'g', 'sh': 'sh', 'ch': 'ch', 'ñ': 'n'
-  };
+  if (!text) return "";
 
-  let string = text.toString().toLowerCase().trim();
-
-  Object.keys(uzbekChars).forEach(key => {
-    string = string.replace(new RegExp(key, 'g'), uzbekChars[key]);
-  });
-
-  return string
-    .replace(/\s+/g, '-')           // Bo'shliqlarni chiziqcha qiladi
-    .replace(/[^\w-]+/g, '')        // Kirill yoki boshqa belgilarni o'chiradi
-    .replace(/--+/g, '-')           // Dublikat chiziqlarni o'chiradi
-    .replace(/^-+/, '')             // Boshidagi chiziqni o'chiradi
-    .replace(/-+$/, '');            // Oxiridagi chiziqni o'chiradi
+  return String(text)
+    .normalize("NFKC")
+    .toLowerCase()
+    .trim()
+    .split("")
+    .map((character) => CYRILLIC_TO_LATIN[character] ?? character)
+    .join("")
+    .replace(/[ʻʼ’‘`´']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
 };
 
 module.exports = slugify;
