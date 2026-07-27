@@ -261,7 +261,9 @@ const deleteCategory = async (req, res, next) => {
   try {
     const categoryId = req.params.id;
 
-    const hasProducts = await Product.findOne({ category: categoryId });
+    const hasProducts = await Product.findOne({
+      $or: [{ category: categoryId }, { categories: categoryId }],
+    });
     if (hasProducts) {
       return apiResponse(
         res,
@@ -289,7 +291,9 @@ const deleteSubCategory = async (req, res, next) => {
   try {
     const { categoryId, subId } = req.params;
 
-    const hasProducts = await Product.findOne({ subCategoryId: subId });
+    const hasProducts = await Product.findOne({
+      $or: [{ subCategoryId: subId }, { subCategoryIds: subId }],
+    });
     if (hasProducts) {
       return apiResponse(
         res,

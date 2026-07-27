@@ -223,7 +223,10 @@ exports.getAllProducts = async (req, res, next) => {
       );
 
       if (isObjectId(categoryItem)) {
-        genreFilters.unshift({ category: categoryItem });
+        genreFilters.unshift(
+          { category: categoryItem },
+          { categories: categoryItem },
+        );
       }
 
       if (resolvedCategory) {
@@ -242,7 +245,10 @@ exports.getAllProducts = async (req, res, next) => {
 
     for (const subgenreItem of subgenreList) {
       if (isObjectId(subgenreItem)) {
-        genreFilters.push({ subCategoryId: subgenreItem });
+        genreFilters.push(
+          { subCategoryId: subgenreItem },
+          { subCategoryIds: subgenreItem },
+        );
         continue;
       }
 
@@ -258,7 +264,10 @@ exports.getAllProducts = async (req, res, next) => {
         genreFilters.push(...buildNameFilters(subgenreNames));
 
         if (resolvedSubgenre.subgenre._id) {
-          genreFilters.push({ subCategoryId: resolvedSubgenre.subgenre._id });
+          genreFilters.push(
+            { subCategoryId: resolvedSubgenre.subgenre._id },
+            { subCategoryIds: resolvedSubgenre.subgenre._id },
+          );
         }
 
         if (resolvedSubgenre.subgenre.books?.length) {

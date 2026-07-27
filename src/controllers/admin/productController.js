@@ -44,6 +44,28 @@ const normalizeAuthorIds = (value) => {
   ];
 };
 
+const normalizeIdValues = (value) => {
+  const parsedValue = parseMaybeJson(value);
+  const values = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+
+  return [
+    ...new Set(
+      values
+        .flatMap((item) =>
+          typeof item === "string" ? item.split(",") : [item],
+        )
+        .map((item) => {
+          if (item && typeof item === "object") {
+            return item._id ?? item.id ?? item.value ?? item;
+          }
+          return item;
+        })
+        .map(toTrimmedString)
+        .filter(Boolean),
+    ),
+  ];
+};
+
 const getAuthorNames = (authors) =>
   (Array.isArray(authors) ? authors : [authors])
     .map((author) => author?.name)
@@ -65,6 +87,14 @@ const normalizePayload = (payload = {}) => {
 
   if (payload.author !== undefined) {
     normalized.author = normalizeAuthorIds(payload.author);
+  }
+
+  if (payload.categories !== undefined) {
+    normalized.categories = normalizeIdValues(payload.categories);
+  }
+
+  if (payload.subCategoryIds !== undefined) {
+    normalized.subCategoryIds = normalizeIdValues(payload.subCategoryIds);
   }
 
   if (payload.isTop !== undefined) {
@@ -206,15 +236,81 @@ const validateCategorySubgenre = async (categoryId, subCategoryId) => {
   };
 };
 
+const validateCatalogSelections = async (categoryValues, subCategoryValues) => {
+  const categoryIds = normalizeIdValues(categoryValues);
+  const subCategoryIds = normalizeIdValues(subCategoryValues);
+
+  if (!categoryIds.length) {
+    return { error: "Kamida bitta kategoriya tanlang" };
+  }
+
+  const categories = await Category.find({ _id: { $in: categoryIds } }).select(
+    "subgenres",
+  );
+  if (categories.length !== categoryIds.length) {
+    return { error: "Tanlangan kategoriyalardan biri topilmadi" };
+  }
+
+  const normalizedSubCategoryIds = [];
+  for (const categoryId of categoryIds) {
+    const category = categories.find(
+      (item) => getIdString(item._id) === categoryId,
+    );
+    await ensurePersistentSubgenreIds(category);
+
+    const selectedForCategory = category.subgenres.filter((subgenre) =>
+      subCategoryIds.includes(getIdString(subgenre._id)),
+    );
+    if (category.subgenres.length && !selectedForCategory.length) {
+      return {
+        error: "Har bir tanlangan kategoriya uchun kamida bitta subkategoriya tanlang",
+      };
+    }
+    normalizedSubCategoryIds.push(
+      ...selectedForCategory.map((subgenre) => getIdString(subgenre._id)),
+    );
+  }
+
+  if (normalizedSubCategoryIds.length !== subCategoryIds.length) {
+    return {
+      error: "Tanlangan subkategoriyalardan biri kategoriyalarga tegishli emas",
+    };
+  }
+
+  const primaryCategory = categories.find(
+    (item) => getIdString(item._id) === categoryIds[0],
+  );
+  const primarySubCategory = primaryCategory.subgenres.find((subgenre) =>
+    normalizedSubCategoryIds.includes(getIdString(subgenre._id)),
+  );
+
+  return {
+    categoryIds,
+    subCategoryIds: [...new Set(normalizedSubCategoryIds)],
+    primaryCategoryId: primaryCategory._id,
+    primarySubCategoryId: primarySubCategory?._id || null,
+  };
+};
+
 const syncBookRelations = async (
   productId,
   previousProduct = {},
   nextProduct = {},
 ) => {
-  const previousCategoryId = getIdString(previousProduct.category);
-  const previousSubCategoryId = getIdString(previousProduct.subCategoryId);
-  const nextCategoryId = getIdString(nextProduct.category);
-  const nextSubCategoryId = getIdString(nextProduct.subCategoryId);
+  const previousSubCategoryIds = (
+    previousProduct.subCategoryIds?.length
+      ? previousProduct.subCategoryIds
+      : [previousProduct.subCategoryId]
+  )
+    .map(getIdString)
+    .filter(Boolean);
+  const nextSubCategoryIds = (
+    nextProduct.subCategoryIds?.length
+      ? nextProduct.subCategoryIds
+      : [nextProduct.subCategoryId]
+  )
+    .map(getIdString)
+    .filter(Boolean);
 
   const previousAuthorIds = (Array.isArray(previousProduct.author)
     ? previousProduct.author
@@ -234,28 +330,26 @@ const syncBookRelations = async (
 
   const updates = [];
 
-  if (
-    previousCategoryId &&
-    previousSubCategoryId &&
-    (previousCategoryId !== nextCategoryId ||
-      previousSubCategoryId !== nextSubCategoryId)
-  ) {
+  const removedSubCategoryIds = previousSubCategoryIds.filter(
+    (subCategoryId) => !nextSubCategoryIds.includes(subCategoryId),
+  );
+  removedSubCategoryIds.forEach((subCategoryId) => {
     updates.push(
       Category.updateOne(
-        { _id: previousCategoryId, "subgenres._id": previousSubCategoryId },
+        { "subgenres._id": subCategoryId },
         { $pull: { "subgenres.$.books": productId } },
       ),
     );
-  }
+  });
 
-  if (nextCategoryId && nextSubCategoryId) {
+  nextSubCategoryIds.forEach((subCategoryId) => {
     updates.push(
       Category.updateOne(
-        { _id: nextCategoryId, "subgenres._id": nextSubCategoryId },
+        { "subgenres._id": subCategoryId },
         { $addToSet: { "subgenres.$.books": productId } },
       ),
     );
-  }
+  });
 
   const removedAuthorIds = previousAuthorIds.filter(
     (authorId) => !nextAuthorIds.includes(authorId),
@@ -330,7 +424,10 @@ const getAllProducts = async (req, res, next) => {
     }
 
     if (category) {
-      filter.category = category;
+      filter.$and = [
+        ...(filter.$and || []),
+        { $or: [{ category }, { categories: category }] },
+      ];
     }
 
     if (author) {
@@ -343,7 +440,15 @@ const getAllProducts = async (req, res, next) => {
 
     const selectedSubgenre = subCategoryId || subgenreId || subgenre;
     if (selectedSubgenre) {
-      filter.subCategoryId = selectedSubgenre;
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { subCategoryId: selectedSubgenre },
+            { subCategoryIds: selectedSubgenre },
+          ],
+        },
+      ];
     }
 
     const products = await Product.find(filter)
@@ -393,8 +498,10 @@ const createProduct = async (req, res, next) => {
     if (price === undefined || price === null) {
       return apiResponse(res, 400, false, "price majburiy");
     }
-    const categoryId = resolveCategoryId(payload);
-    if (!categoryId) {
+    const categoryValues = payload.categories?.length
+      ? payload.categories
+      : [resolveCategoryId(payload)].filter(Boolean);
+    if (!categoryValues.length) {
       return apiResponse(res, 400, false, "category majburiy");
     }
     if (!payload.author?.length) {
@@ -415,13 +522,15 @@ const createProduct = async (req, res, next) => {
       );
     }
 
-    const subCategoryId = resolveSubCategoryId(payload);
-    const categoryValidation = await validateCategorySubgenre(
-      categoryId,
-      subCategoryId,
+    const subCategoryValues = payload.subCategoryIds?.length
+      ? payload.subCategoryIds
+      : [resolveSubCategoryId(payload)].filter(Boolean);
+    const catalogValidation = await validateCatalogSelections(
+      categoryValues,
+      subCategoryValues,
     );
-    if (categoryValidation.error) {
-      return apiResponse(res, 400, false, categoryValidation.error);
+    if (catalogValidation.error) {
+      return apiResponse(res, 400, false, catalogValidation.error);
     }
 
     const publisherValidation = await validatePublisher(
@@ -487,12 +596,14 @@ const createProduct = async (req, res, next) => {
 
     const createData = {
       ...payload,
-      category: categoryId,
+      category: catalogValidation.primaryCategoryId,
+      categories: catalogValidation.categoryIds,
       slug,
       price: priceNum,
       discountPrice: discountNum,
       stock: stockNum,
-      subCategoryId: categoryValidation.subCategoryId,
+      subCategoryId: catalogValidation.primarySubCategoryId,
+      subCategoryIds: catalogValidation.subCategoryIds,
       publisher: publisherValidation.publisherId,
       images: imageUrls,
       isDiscount,
@@ -549,21 +660,38 @@ const updateProduct = async (req, res, next) => {
     }
 
     const updateData = { ...payload };
-    const nextCategoryId = resolveCategoryId(payload) || product.category;
+    const hasCategoryField =
+      Object.prototype.hasOwnProperty.call(req.body, "categories") ||
+      Object.prototype.hasOwnProperty.call(req.body, "category") ||
+      Object.prototype.hasOwnProperty.call(req.body, "categoryId");
+    const currentCategoryIds = product.categories?.length
+      ? product.categories
+      : [product.category];
+    const nextCategoryIds = hasCategoryField
+      ? payload.categories?.length
+        ? payload.categories
+        : [resolveCategoryId(payload)].filter(Boolean)
+      : currentCategoryIds;
     const hasSubCategoryField =
+      Object.prototype.hasOwnProperty.call(payload, "subCategoryIds") ||
       Object.prototype.hasOwnProperty.call(payload, "subCategoryId") ||
       Object.prototype.hasOwnProperty.call(payload, "subgenreId") ||
       Object.prototype.hasOwnProperty.call(payload, "subgenre");
-    const nextSubCategoryId = hasSubCategoryField
-      ? resolveSubCategoryId(payload)
-      : product.subCategoryId;
+    const currentSubCategoryIds = product.subCategoryIds?.length
+      ? product.subCategoryIds
+      : [product.subCategoryId].filter(Boolean);
+    const nextSubCategoryIds = hasSubCategoryField
+      ? payload.subCategoryIds?.length
+        ? payload.subCategoryIds
+        : [resolveSubCategoryId(payload)].filter(Boolean)
+      : currentSubCategoryIds;
 
-    const categoryValidation = await validateCategorySubgenre(
-      nextCategoryId,
-      nextSubCategoryId,
+    const catalogValidation = await validateCatalogSelections(
+      nextCategoryIds,
+      nextSubCategoryIds,
     );
-    if (categoryValidation.error) {
-      return apiResponse(res, 400, false, categoryValidation.error);
+    if (catalogValidation.error) {
+      return apiResponse(res, 400, false, catalogValidation.error);
     }
 
     const hasPublisherField =
@@ -578,8 +706,10 @@ const updateProduct = async (req, res, next) => {
       return apiResponse(res, 400, false, publisherValidation.error);
     }
 
-    updateData.subCategoryId = categoryValidation.subCategoryId;
-    updateData.category = nextCategoryId;
+    updateData.subCategoryId = catalogValidation.primarySubCategoryId;
+    updateData.subCategoryIds = catalogValidation.subCategoryIds;
+    updateData.category = catalogValidation.primaryCategoryId;
+    updateData.categories = catalogValidation.categoryIds;
     updateData.publisher = publisherValidation.publisherId;
     delete updateData.subgenreId;
     delete updateData.subgenre;

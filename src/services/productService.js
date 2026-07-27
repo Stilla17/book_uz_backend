@@ -14,9 +14,24 @@ class ProductService {
     let filter = { isActive: true };
 
     // Filterlash mantiqi
-    if (category) filter.category = category;
+    if (category) {
+      filter.$and = [
+        ...(filter.$and || []),
+        { $or: [{ category }, { categories: category }] },
+      ];
+    }
     if (subCategory || subCategoryId || subgenreId || subgenre) {
-      filter.subCategoryId = subCategory || subCategoryId || subgenreId || subgenre;
+      const selectedSubCategory =
+        subCategory || subCategoryId || subgenreId || subgenre;
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { subCategoryId: selectedSubCategory },
+            { subCategoryIds: selectedSubCategory },
+          ],
+        },
+      ];
     }
     if (author) filter.author = author;
     if (publisher || publish) filter.publisher = publisher || publish;

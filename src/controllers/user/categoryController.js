@@ -21,68 +21,36 @@ const buildCategoryTree = async (filter = {}) => {
     return [];
   }
 
-  const categoryIds = categories
-    .map((category) => category._id)
-    .filter(Boolean);
+  const categoryCounts = await Promise.all(
+    categories.map(async (category) => {
+      const categoryId = category._id;
+      const count = await Product.countDocuments({
+        isActive: true,
+        $or: [{ category: categoryId }, { categories: categoryId }],
+      });
 
-  const categoryMatch = {
-    isActive: true,
-    $or: [
-      { category: { $in: categoryIds } },
-      { "category._id": { $in: categoryIds } },
-      { "category.id": { $in: categoryIds } },
-    ],
-  };
+      return [getIdString(categoryId), count];
+    }),
+  );
+  const subcategoryCounts = await Promise.all(
+    categories.flatMap((category) =>
+      getCategorySubgenres(category).map(async (subgenre) => {
+        const subCategoryId = subgenre._id;
+        const count = await Product.countDocuments({
+          isActive: true,
+          $or: [
+            { subCategoryId },
+            { subCategoryIds: subCategoryId },
+          ],
+        });
 
-  const normalizeCatId = {
-    $addFields: {
-      catId: {
-        $cond: {
-          if: { $eq: [{ $type: "$category" }, "object"] },
-          then: { $ifNull: ["$category._id", "$category.id"] },
-          else: "$category",
-        },
-      },
-    },
-  };
-
-  const [categoryCounts, subcategoryCounts] = await Promise.all([
-    Product.aggregate([
-      { $match: categoryMatch },
-      normalizeCatId,
-      { $group: { _id: "$catId", count: { $sum: 1 } } },
-    ]),
-    Product.aggregate([
-      {
-        $match: {
-          ...categoryMatch,
-          subCategoryId: { $exists: true, $ne: null },
-        },
-      },
-      normalizeCatId,
-      {
-        $group: {
-          _id: { category: "$catId", subCategoryId: "$subCategoryId" },
-          count: { $sum: 1 },
-        },
-      },
-    ]),
-  ]);
-
-  const categoryCountMap = new Map(
-    categoryCounts
-      .filter((item) => item._id)
-      .map((item) => [getIdString(item._id), item.count]),
+        return [getIdString(subCategoryId), count];
+      }),
+    ),
   );
 
-  const subcategoryCountMap = new Map(
-    subcategoryCounts
-      .filter((item) => item._id?.category && item._id?.subCategoryId)
-      .map((item) => [
-        `${getIdString(item._id.category)}:${getIdString(item._id.subCategoryId)}`,
-        item.count,
-      ]),
-  );
+  const categoryCountMap = new Map(categoryCounts);
+  const subcategoryCountMap = new Map(subcategoryCounts);
 
   return categories
     .filter((category) => category._id)
@@ -97,10 +65,7 @@ const buildCategoryTree = async (filter = {}) => {
         .map((subgenre) => ({
           ...subgenre,
           name: getSubgenreName(subgenre),
-          bookCount:
-            subcategoryCountMap.get(
-              `${categoryId}:${getIdString(subgenre._id)}`,
-            ) || 0,
+          bookCount: subcategoryCountMap.get(getIdString(subgenre._id)) || 0,
         }));
 
       return {
@@ -175,36 +140,23 @@ const getCategoryBySlug = async (req, res, next) => {
         isActive: true,
         $or: [
           { category: categoryId },
+          { categories: categoryId },
           { "category._id": categoryId },
           { "category.id": categoryId },
         ],
       }),
-      Product.aggregate([
-        {
-          $addFields: {
-            categoryId: {
-              $cond: {
-                if: { $eq: [{ $type: "$category" }, "object"] },
-                then: { $ifNull: ["$category._id", "$category.id"] },
-                else: "$category",
-              },
-            },
-          },
-        },
-        {
-          $match: {
+      Promise.all(
+        getCategorySubgenres(category).map(async (subgenre) => ({
+          _id: subgenre._id,
+          count: await Product.countDocuments({
             isActive: true,
-            categoryId,
-            subCategoryId: { $exists: true, $ne: null },
-          },
-        },
-        {
-          $group: {
-            _id: "$subCategoryId",
-            count: { $sum: 1 },
-          },
-        },
-      ]),
+            $or: [
+              { subCategoryId: subgenre._id },
+              { subCategoryIds: subgenre._id },
+            ],
+          }),
+        })),
+      ),
     ]);
 
     const subcategoryCountMap = new Map(
@@ -260,7 +212,10 @@ const getCategoryProducts = async (req, res, next) => {
       return apiResponse(res, 404, false, "Kategoriya topilmadi");
     }
 
-    let filter = { category: category._id, isActive: true };
+    let filter = {
+      isActive: true,
+      $or: [{ category: category._id }, { categories: category._id }],
+    };
 
     if (minPrice || maxPrice) {
       filter.price = {};

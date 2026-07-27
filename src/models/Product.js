@@ -56,7 +56,15 @@ const ProductSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
+    categories: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+      default: [],
+    },
     subCategoryId: { type: mongoose.Schema.Types.ObjectId },
+    subCategoryIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId }],
+      default: [],
+    },
 
     author: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Author" }],
@@ -141,6 +149,8 @@ ProductSchema.virtual("subgenre").get(function getSubgenre() {
 });
 
 ProductSchema.index({ category: 1, subCategoryId: 1 });
+ProductSchema.index({ categories: 1 });
+ProductSchema.index({ subCategoryIds: 1 });
 ProductSchema.index({ author: 1 });
 ProductSchema.index({ publisher: 1 });
 
