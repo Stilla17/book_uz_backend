@@ -21,6 +21,9 @@ const {
 const { getIdString } = require("../../utils/categoryView");
 const { parseMaybeJson, parseBoolean } = require("../../utils/parsing");
 const { cleanBarcode } = require("../../utils/moyskladClient");
+const {
+  ensureMoyskladProduct,
+} = require("../../services/moyskladProductLinkService");
 
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
@@ -510,6 +513,9 @@ const createProduct = async (req, res, next) => {
     if (!payload.publisher) {
       return apiResponse(res, 400, false, "publisher majburiy");
     }
+    if (!payload.barcode) {
+      return apiResponse(res, 400, false, "ISBN majburiy");
+    }
 
     const duplicateBarcode = await findDuplicateBarcode(payload.barcode);
     if (duplicateBarcode) {
@@ -616,6 +622,15 @@ const createProduct = async (req, res, next) => {
 
     const newProduct = await Product.create(createData);
     await syncBookRelations(newProduct._id, {}, newProduct);
+
+    try {
+      await ensureMoyskladProduct(newProduct);
+    } catch (moyskladError) {
+      console.error(
+        `Yangi kitob MoySklad bilan bog'lanmadi (${newProduct._id}):`,
+        moyskladError.message,
+      );
+    }
 
     apiResponse(res, 201, true, "Kitob muvaffaqiyatli qo'shildi", newProduct);
   } catch (error) {

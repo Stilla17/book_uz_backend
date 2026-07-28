@@ -2,6 +2,9 @@ const axios = require("axios");
 const Product = require("../models/Product");
 const TOKEN = process.env.MOYSKLAD_API_KEY;
 const {
+  ensureMoyskladProduct,
+} = require("../services/moyskladProductLinkService");
+const {
   delay,
   getMoyskladBaseUrl,
   moyskladHeaders,
@@ -13,7 +16,7 @@ const {
 const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
 const ASSORTMENT_CHUNK_SIZE = 50;
-const FIVE_HOURS_IN_MS = 5 * 60 * 60 * 1000;
+const SEVEN_HOURS_IN_MS = 7 * 60 * 60 * 1000;
 
 let isSyncing = false;
 
@@ -141,7 +144,7 @@ const syncMoyskladProducts = async (options = {}) => {
       : {};
     const myProducts = await Product.find(
       productFilter,
-      "_id price moyskladId title",
+      "_id price barcode cover moyskladId title",
     ).lean();
 
     if (!myProducts.length) {
@@ -203,6 +206,41 @@ const syncMoyskladProducts = async (options = {}) => {
       claimedMoyskladIds.set(assortment.id, bookuzId);
       resolvedProducts.push({ product, assortment, bookuzId });
     });
+
+    const resolvedBookuzIds = new Set(
+      resolvedProducts.map((resolved) => resolved.product._id.toString()),
+    );
+    const productsToAutoLink = myProducts.filter(
+      (product) =>
+        !resolvedBookuzIds.has(product._id.toString()) &&
+        !conflictedExternalCodes.has(product._id.toString()),
+    );
+
+    for (const product of productsToAutoLink) {
+      const bookuzId = product._id.toString();
+
+      try {
+        const assortment = await ensureMoyskladProduct(product);
+        const claimedBy = claimedMoyskladIds.get(assortment.id);
+
+        if (claimedBy && claimedBy !== bookuzId) {
+          conflictedExternalCodes.add(bookuzId);
+          conflictedExternalCodes.add(claimedBy);
+          continue;
+        }
+
+        claimedMoyskladIds.set(assortment.id, bookuzId);
+        resolvedProducts.push({ product, assortment, bookuzId });
+        console.log(
+          `MoySklad auto-link: ${bookuzId} -> ${assortment.id}`,
+        );
+      } catch (autoLinkError) {
+        logMoyskladError(
+          `MoySklad auto-link xatosi (${bookuzId})`,
+          autoLinkError,
+        );
+      }
+    }
 
     let synchronizedCount = 0;
     let externalCodeUpdatedCount = 0;
@@ -303,13 +341,13 @@ const syncMoyskladProducts = async (options = {}) => {
   }
 };
 
-// Server ishga tushgan vaqtdan boshlab har 5 soatda sinxronizatsiya qiladi.
+// Server ishga tushgan vaqtdan boshlab har 7 soatda sinxronizatsiya qiladi.
 const startSyncCron = () => {
   setInterval(() => {
     syncMoyskladProducts();
-  }, FIVE_HOURS_IN_MS);
+  }, SEVEN_HOURS_IN_MS);
 
-  console.log("MoySklad sinxronizatsiyasi har 5 soatga sozlandi");
+  console.log("MoySklad sinxronizatsiyasi har 7 soatga sozlandi");
 };
 
 module.exports = { syncMoyskladProducts, startSyncCron };
