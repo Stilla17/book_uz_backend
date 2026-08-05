@@ -24,9 +24,12 @@ const getOrderDeliveryFee = (
   postDeliveryType,
   configuredDeliveryFee,
   subTotal,
+  forceFreeDelivery = false,
 ) => {
   // Do'kondan olib ketish doim bepul
   if (deliveryType === "PICKUP") return 0;
+
+  if (forceFreeDelivery) return 0;
 
   // Pochtadan uyga yetkazish uchun bepul dostavka ishlamaydi
   const isPostToHome =
@@ -185,6 +188,7 @@ class OrderService {
       guestName,
       description,
       couponCode,
+      freeDelivery = false,
     } = orderData;
     const normalizedPostDeliveryType =
       deliveryType === "POST" ? postDeliveryType || "POST_OFFICE" : undefined;
@@ -366,11 +370,14 @@ class OrderService {
       }
 
       const configuredDeliveryFee = await getDeliveryFee();
+      const hasTashkentFreeDelivery =
+        freeDelivery === true && shippingAddress?.regionId === "toshkent_shahri";
       const deliveryFee = getOrderDeliveryFee(
         deliveryType,
         normalizedPostDeliveryType,
         configuredDeliveryFee,
         subTotal,
+        hasTashkentFreeDelivery,
       );
       const totalAmount = subTotal - discount + deliveryFee;
       const orderCustomer = await this.findOrCreateOrderCustomer({
