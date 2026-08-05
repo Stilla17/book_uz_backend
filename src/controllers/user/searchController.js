@@ -33,7 +33,7 @@ exports.getSuggestions = async (req, res, next) => {
           { "title.en": searchRegex }
         ]
       })
-      .select('title images price discountPrice slug author publisher')
+      .select('title image price discountPrice slug author publisher')
       .populate('author')
       .populate('publisher')
       .limit(5),

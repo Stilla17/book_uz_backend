@@ -25,6 +25,13 @@ const {
   ensureMoyskladProduct,
 } = require("../../services/moyskladProductLinkService");
 
+const deleteProductImageFromCloudinary = async (imageUrl) => {
+  if (!imageUrl) return;
+
+  const publicId = imageUrl.split("/").pop().split(".")[0];
+  await cloudinary.uploader.destroy(`bookstore/products/${publicId}`);
+};
+
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
   if (value === undefined || value === null) return "";
@@ -596,7 +603,7 @@ const createProduct = async (req, res, next) => {
       );
     }
 
-    const imageUrls = req.files ? req.files.map((file) => file.path) : [];
+    const image = req.file?.path || "";
 
     const isDiscount = discountNum > 0 && discountNum < priceNum;
 
@@ -611,7 +618,7 @@ const createProduct = async (req, res, next) => {
       subCategoryId: catalogValidation.primarySubCategoryId,
       subCategoryIds: catalogValidation.subCategoryIds,
       publisher: publisherValidation.publisherId,
-      images: imageUrls,
+      image,
       isDiscount,
     };
     delete createData.subgenreId;
@@ -765,9 +772,8 @@ const updateProduct = async (req, res, next) => {
         currentDiscount > 0 && currentDiscount < currentPrice;
     }
 
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file) => file.path);
-      updateData.images = [...product.images, ...newImages];
+    if (req.file) {
+      updateData.image = req.file.path;
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -775,6 +781,18 @@ const updateProduct = async (req, res, next) => {
       { $set: updateData },
       { new: true },
     );
+
+    if (req.file && product.image && product.image !== req.file.path) {
+      try {
+        await deleteProductImageFromCloudinary(product.image);
+      } catch (cloudinaryError) {
+        console.error(
+          `Eski product rasmi o'chirilmadi (${product._id}):`,
+          cloudinaryError.message,
+        );
+      }
+    }
+
     await syncBookRelations(id, product, updatedProduct);
 
     apiResponse(
@@ -796,20 +814,20 @@ const updateProduct = async (req, res, next) => {
 const deleteProductImage = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { imageUrl } = req.body;
-
     const product = await Product.findById(id);
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
+    if (!product.image) {
+      return apiResponse(res, 400, false, "Kitobda rasm mavjud emas");
+    }
 
     // 1. Cloudinary'dan o'chirish (Public ID orqali)
-    const publicId = imageUrl.split("/").pop().split(".")[0];
-    await cloudinary.uploader.destroy(`bookstore/products/${publicId}`);
+    await deleteProductImageFromCloudinary(product.image);
 
     // 2. Bazadan o'chirish
-    product.images = product.images.filter((img) => img !== imageUrl);
+    product.image = "";
     await product.save();
 
-    apiResponse(res, 200, true, "Rasm o'chirildi", product.images);
+    apiResponse(res, 200, true, "Rasm o'chirildi", product.image);
   } catch (error) {
     next(error);
   }
@@ -824,12 +842,8 @@ const deleteProduct = async (req, res, next) => {
     const product = await Product.findById(req.params.id);
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
 
-    if (product.images.length > 0) {
-      const deletePromises = product.images.map((img) => {
-        const publicId = img.split("/").pop().split(".")[0];
-        return cloudinary.uploader.destroy(`bookstore/products/${publicId}`);
-      });
-      await Promise.all(deletePromises);
+    if (product.image) {
+      await deleteProductImageFromCloudinary(product.image);
     }
 
     await syncBookRelations(product._id, product, {});

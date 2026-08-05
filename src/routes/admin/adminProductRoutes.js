@@ -14,12 +14,12 @@ router.get("/search", productController.searchProducts);
 router.get("/:id", productController.getProductById); // YANGI QO'SHILDI (agar kerak bo'lsa)
 
 // POST routes
-router.post("/", upload.array("images", 5), productController.createProduct);
+router.post("/", upload.single("image"), productController.createProduct);
 
 // PATCH routes
 router.patch(
   "/:id",
-  upload.array("images", 5),
+  upload.single("image"),
   productController.updateProduct,
 );
 router.patch("/:id/stock", productController.updateStock);

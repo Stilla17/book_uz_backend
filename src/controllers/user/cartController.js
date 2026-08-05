@@ -6,7 +6,7 @@ const { applyActiveDiscountsToProducts, getEffectiveProductPrice } = require('..
 const populateCartProducts = (query) =>
   query.populate({
     path: 'items.product',
-    select: 'title price discountPrice images stock slug format author publisher',
+    select: 'title price discountPrice image stock slug format author publisher',
     match: { isActive: true },
     populate: [
       { path: 'author' },

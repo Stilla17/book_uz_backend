@@ -59,7 +59,7 @@ const getMyOrders = async (req, res, next) => {
     const orders = await Order.find(filter)
       .populate({
         path: 'items.product',
-        select: 'title images price author publisher',
+        select: 'title image price author publisher',
         populate: [
           { path: 'author' },
           { path: 'publisher' },
@@ -134,7 +134,7 @@ const trackGuestOrder = async (req, res, next) => {
       "shippingAddress.phone": { $in: phoneVariants },
     }).populate({
       path: 'items.product',
-      select: 'title images price author publisher',
+      select: 'title image price author publisher',
       populate: [
         { path: 'author' },
         { path: 'publisher' },

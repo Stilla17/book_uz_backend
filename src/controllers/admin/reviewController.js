@@ -19,7 +19,7 @@ const getAllReviewsAdmin = async (req, res, next) => {
 
     const reviews = await Review.find(filter)
       .populate('user', 'name email avatar')
-      .populate('product', 'title images')
+      .populate('product', 'title image')
       .sort('-createdAt')
       .skip(paginationParams.skip)
       .limit(paginationParams.limit);

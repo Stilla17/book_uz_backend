@@ -23,6 +23,7 @@ const endpoints = [
   ["get", "/products", "Products", "Kitoblar ro'yxatini olish"],
   ["get", "/products/new-arrivals", "Products", "Yangi kelgan kitoblar"],
   ["get", "/products/{id}", "Products", "Kitob tafsilotlari"],
+  ["post", "/products/{id}/view", "Products", "Kitob ko'rilishini yozish"],
   ["get", "/products/{id}/related", "Products", "O'xshash kitoblar"],
   ["get", "/search/suggestions", "Search", "Qidiruv takliflari"],
 

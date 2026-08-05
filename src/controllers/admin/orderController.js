@@ -247,7 +247,7 @@ exports.getOrderById = async (req, res, next) => {
       .populate('user', 'name email phone avatar')
       .populate(
         'items.product',
-        'title slug price discountPrice images stock barcode author publisher'
+        'title slug price discountPrice image stock barcode author publisher'
       );
 
     if (!order) {
@@ -334,7 +334,7 @@ exports.createManualOrder = async (req, res, next) => {
 
     const populatedOrder = await Order.findById(order._id)
       .populate('user', 'name email phone')
-      .populate('items.product', 'title price discountPrice images barcode');
+      .populate('items.product', 'title price discountPrice image barcode');
 
     socketEvents.emitNewOrder(populatedOrder);
 

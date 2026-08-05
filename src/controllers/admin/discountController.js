@@ -46,7 +46,7 @@ const createDiscount = async (req, res, next) => {
 const getAllDiscounts = async (req, res, next) => {
   try {
     const discounts = await Discount.find()
-      .populate("products", "title slug price discountPrice images")
+      .populate("products", "title slug price discountPrice image")
       .populate("publishers", "name slug image")
       .sort("-createdAt");
     apiResponse(
@@ -64,7 +64,7 @@ const getAllDiscounts = async (req, res, next) => {
 const getDiscountById = async (req, res, next) => {
   try {
     const discount = await Discount.findById(req.params.id)
-      .populate("products", "title slug price discountPrice images")
+      .populate("products", "title slug price discountPrice image")
       .populate("publishers", "name slug image");
 
     if (!discount) {

@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed:categories": "node src/scripts/seedCategoryMenu.js",
-    "sync:moysklad-products": "node scripts/moysklad-sync-products.js"
+    "sync:moysklad-products": "node scripts/moysklad-sync-products.js",
+    "migrate:product-image": "node scripts/migrate-product-images.js"
   },
   "keywords": [],
   "author": "",

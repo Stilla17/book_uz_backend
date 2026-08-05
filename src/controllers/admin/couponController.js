@@ -47,7 +47,7 @@ exports.createCoupon = async (req, res, next) => {
 exports.getAllCoupons = async (req, res, next) => {
   try {
     const coupons = await Coupon.find()
-      .populate('applicableProducts', 'title slug price images')
+      .populate('applicableProducts', 'title slug price image')
       .populate('applicablePublishers', 'name slug image')
       .sort('-createdAt');
 

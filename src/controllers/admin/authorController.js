@@ -144,7 +144,7 @@ const getAuthorDetailsAdmin = async (req, res, next) => {
     if (!author) return apiResponse(res, 404, false, "Muallif topilmadi");
 
     const products = await Product.find({ author: author._id })
-      .select('title slug images price discountPrice stock ratingAvg category subCategoryId publisher')
+      .select('title slug image price discountPrice stock ratingAvg category subCategoryId publisher')
       .populate('category', 'title subgenres')
       .populate('publisher', 'name slug image');
 

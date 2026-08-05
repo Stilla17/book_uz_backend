@@ -117,7 +117,7 @@ const getTopProducts = async (req, res, next) => {
           totalSold: 1,
           revenue: 1,
           title: "$productDetails.title",
-          images: "$productDetails.images"
+          image: "$productDetails.image"
         }
       }
     ]);

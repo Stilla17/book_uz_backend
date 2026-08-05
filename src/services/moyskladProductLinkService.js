@@ -15,17 +15,18 @@ const headers = moyskladHeaders(TOKEN);
 
 const linkingByProductId = new Map();
 
-const getAllMoyskladBarcodes = (assortment = {}) => {
-  const values = [];
+const getPrimaryMoyskladBarcode = (assortment = {}) => {
+  const firstBarcode = assortment.barcodes?.[0];
+  if (!firstBarcode) return "";
 
-  (assortment.barcodes || []).forEach((barcode) => {
-    Object.values(barcode).forEach((value) => {
-      const normalized = cleanBarcode(value);
-      if (normalized) values.push(normalized);
-    });
-  });
+  const value =
+    firstBarcode.ean13 ||
+    firstBarcode.ean8 ||
+    firstBarcode.code128 ||
+    firstBarcode.gtin ||
+    Object.values(firstBarcode)[0];
 
-  return [...new Set(values)];
+  return cleanBarcode(value);
 };
 
 const findByExternalCode = async (bookuzId) => {
@@ -105,8 +106,8 @@ const findByUniqueBarcode = async (product) => {
       }),
     `MoySklad ISBN qidiruvi (${normalized})`,
   );
-  const exactMatches = (response?.data?.rows || []).filter((assortment) =>
-    getAllMoyskladBarcodes(assortment).includes(normalized),
+  const exactMatches = (response?.data?.rows || []).filter(
+    (assortment) => getPrimaryMoyskladBarcode(assortment) === normalized,
   );
 
   if (exactMatches.length === 1) {

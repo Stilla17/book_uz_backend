@@ -9,6 +9,9 @@ router.get('/', optionalProtect, productController.getAllProducts);
 // 2. Yangi kelganlar (Asosiy sahifa uchun)
 router.get('/new-arrivals', optionalProtect, productController.getNewArrivals);
 
+// Kitob ko'rilganda bazadagi hisoblagichni atomik oshirish
+router.post('/:id/view', productController.trackProductView);
+
 // 3. Bitta mahsulot tafsiloti
 router.get('/:id', optionalProtect, productController.getProductById);
 

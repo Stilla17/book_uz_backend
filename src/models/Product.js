@@ -23,7 +23,7 @@ const ProductSchema = new mongoose.Schema(
     },
     price: { type: Number, required: true },
     discountPrice: { type: Number, default: 0 },
-    images: [{ type: String }],
+    image: { type: String, default: "" },
     stock: { type: Number, default: 0 },
     branchStocks: [
       {
@@ -92,6 +92,7 @@ const ProductSchema = new mongoose.Schema(
 
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
+    views: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
     tegs: [{ type: String }],
   },

@@ -485,3 +485,31 @@ exports.getProductById = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.trackProductView = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const query = id.match(/^[0-9a-fA-F]{24}$/)
+      ? { _id: id, isActive: true }
+      : { slug: slugify(id), isActive: true };
+
+    const product = await Product.findOneAndUpdate(
+      query,
+      { $inc: { views: 1 } },
+      { new: true, runValidators: true },
+    ).select("_id slug views");
+
+    if (!product) {
+      return apiResponse(res, 404, false, "Mahsulot topilmadi");
+    }
+
+    apiResponse(res, 200, true, "Ko'rish qayd etildi", {
+      productId: product._id,
+      slug: product.slug,
+      views: product.views,
+    });
+  } catch (error) {
+    console.error("Error in trackProductView:", error);
+    next(error);
+  }
+};

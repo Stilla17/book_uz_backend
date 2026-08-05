@@ -6,7 +6,7 @@ const apiResponse = require('../../utils/apiResponse');
 const cloudinary = require('../../config/cloudinary');
 const { isValidEmail, isValidPhone } = require('../../utils/validator');
 
-const WISHLIST_PRODUCT_SELECT = 'title price discountPrice images ratingAvg slug author publisher stock';
+const WISHLIST_PRODUCT_SELECT = 'title price discountPrice image ratingAvg slug author publisher stock';
 
 const getPublicId = (url) => {
   const parts = url.split('/');

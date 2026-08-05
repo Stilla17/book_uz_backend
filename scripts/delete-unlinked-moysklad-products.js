@@ -241,10 +241,9 @@ const main = async () => {
         remainingUnlinked,
         historicalOrdersPreserved: true,
         purchasedBooksHistoryPreserved: true,
-        cloudinaryImagesPreserved: productsToDelete.reduce(
-          (total, product) => total + (product.images || []).length,
-          0,
-        ),
+        cloudinaryImagesPreserved: productsToDelete.filter(
+          (product) => Boolean(product.image),
+        ).length,
         cleanup: summarizeResults(results),
       },
       null,

@@ -127,7 +127,7 @@ const getAllUsersAdmin = async (req, res, next) => {
 
     const userQuery = User.find(userFilter)
       .select("-password -refreshToken")
-      .populate("purchasedBooks.product", "title price discountPrice images slug")
+      .populate("purchasedBooks.product", "title price discountPrice image slug")
       .sort("-createdAt");
     const amoContactQuery =
       AmoContact.find(amoContactFilter).sort("-createdAt");
@@ -575,13 +575,13 @@ const getUserFullDetailsAdmin = async (req, res, next) => {
       .select("-password")
       .populate(
         "purchasedBooks.product",
-        "title price discountPrice images slug",
+        "title price discountPrice image slug",
       );
     if (!user) return apiResponse(res, 404, false, "Foydalanuvchi topilmadi");
 
     const Order = require("../../models/Order");
     const orders = await Order.find({ user: user._id })
-      .populate("items.product", "title price discountPrice images slug")
+      .populate("items.product", "title price discountPrice image slug")
       .sort("-createdAt");
 
     apiResponse(res, 200, true, "Foydalanuvchi haqida to'liq ma'lumot", {
