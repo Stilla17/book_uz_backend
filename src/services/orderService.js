@@ -14,8 +14,8 @@ const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const { isValidPhone } = require("../utils/validator");
 const { getDeliveryFee } = require("./storeSettingsService");
 
-const POST_OFFICE_DELIVERY_FEE = 40000;
-const POST_TO_HOME_DELIVERY_FEE = 60000;
+const POST_OFFICE_DELIVERY_FEE = 20000;
+const POST_TO_HOME_DELIVERY_FEE = 40000;
 const FREE_DELIVERY_MIN_TOTAL = 300000;
 const POST_DELIVERY_TYPES = ["POST_OFFICE", "POST_TO_HOME"];
 

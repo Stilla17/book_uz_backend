@@ -10,6 +10,9 @@ const {
   moyskladHeaders,
   requestWithRetry,
 } = require("../src/utils/moyskladClient");
+const {
+  calculateRetailStock,
+} = require("../src/utils/moyskladStock");
 
 const APPLY_CHANGES = process.argv.includes("--apply");
 const PAGE_SIZE = 1000;
@@ -353,10 +356,7 @@ const main = async () => {
       stockByAssortmentId.get(assortment.id),
       syncedAt,
     );
-    const stock = Math.max(
-      branchStocks.reduce((total, item) => total + item.available, 0),
-      0,
-    );
+    const stock = calculateRetailStock(branchStocks);
     const updateFields = {
       moyskladId: assortment.id,
       stock,

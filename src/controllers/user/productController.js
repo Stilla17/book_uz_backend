@@ -1,14 +1,19 @@
-const Product = require('../../models/Product');
-const Category = require('../../models/Category');
-const Publisher = require('../../models/Publisher');
-const Author = require('../../models/Author');
-const apiResponse = require('../../utils/apiResponse');
-const hydrateProductRelations = require('../../utils/hydrateProductRelations');
-const { applyActiveDiscountsToProducts } = require('../../utils/productDiscounts');
-const { buildSearchPattern, buildSearchRegex } = require('../../utils/searchRegex');
-const slugify = require('../../utils/slugify');
+const Product = require("../../models/Product");
+const Category = require("../../models/Category");
+const Publisher = require("../../models/Publisher");
+const Author = require("../../models/Author");
+const apiResponse = require("../../utils/apiResponse");
+const hydrateProductRelations = require("../../utils/hydrateProductRelations");
+const {
+  applyActiveDiscountsToProducts,
+} = require("../../utils/productDiscounts");
+const {
+  buildSearchPattern,
+  buildSearchRegex,
+} = require("../../utils/searchRegex");
+const slugify = require("../../utils/slugify");
 
-const CATEGORY_SELECT = 'name title subgenres';
+const CATEGORY_SELECT = "name title subgenres";
 const UNKNOWN_AUTHOR = {
   _id: null,
   name: "Noma'lum",
@@ -31,7 +36,7 @@ const getAuthorNames = (authors) =>
 
 const withDisplayFields = (product) => {
   const productObject =
-    typeof product.toObject === 'function' ? product.toObject() : product;
+    typeof product.toObject === "function" ? product.toObject() : product;
   const primaryCategory = Array.isArray(productObject.category)
     ? productObject.category[0]
     : productObject.category;
@@ -56,7 +61,7 @@ const withDisplayFields = (product) => {
 const getWishlistSet = (req) =>
   new Set((req.user?.wishlist || []).map((id) => id.toString()));
 
-const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ''));
+const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
 
 const parseList = (value) => {
   if (!value) return [];
@@ -65,23 +70,25 @@ const parseList = (value) => {
   }
 
   return String(value)
-    .split(',')
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 };
 
 const getLocalizedValues = (field) => {
   if (!field) return [];
-  if (typeof field === 'string') return [field];
+  if (typeof field === "string") return [field];
 
-  return [field.uz, field.ru, field.en, field.name, field.title].filter(Boolean);
+  return [field.uz, field.ru, field.en, field.name, field.title].filter(
+    Boolean,
+  );
 };
 
 const buildNameFilters = (values) => {
   const uniqueValues = [...new Set(values.filter(Boolean))];
 
   return uniqueValues.map((value) => ({
-    'category.name': buildSearchRegex(value, { exact: true }),
+    "category.name": buildSearchRegex(value, { exact: true }),
   }));
 };
 
@@ -96,9 +103,9 @@ const findCategoryByParam = async (value) => {
   return Category.findOne({
     $or: [
       { slug: value },
-      { 'title.uz': buildSearchRegex(value, { exact: true }) },
-      { 'title.ru': buildSearchRegex(value, { exact: true }) },
-      { 'title.en': buildSearchRegex(value, { exact: true }) },
+      { "title.uz": buildSearchRegex(value, { exact: true }) },
+      { "title.ru": buildSearchRegex(value, { exact: true }) },
+      { "title.en": buildSearchRegex(value, { exact: true }) },
     ],
   }).lean();
 };
@@ -107,29 +114,33 @@ const findSubgenreByParam = async (value) => {
   if (!value) return null;
 
   const subgenreFilters = [
-    { 'subgenres.slug': value },
-    { 'subgenres.title.uz': buildSearchRegex(value, { exact: true }) },
-    { 'subgenres.title.ru': buildSearchRegex(value, { exact: true }) },
-    { 'subgenres.title.en': buildSearchRegex(value, { exact: true }) },
+    { "subgenres.slug": value },
+    { "subgenres.title.uz": buildSearchRegex(value, { exact: true }) },
+    { "subgenres.title.ru": buildSearchRegex(value, { exact: true }) },
+    { "subgenres.title.en": buildSearchRegex(value, { exact: true }) },
   ];
 
   if (isObjectId(value)) {
-    subgenreFilters.push({ 'subgenres._id': value });
+    subgenreFilters.push({ "subgenres._id": value });
   }
 
   const categories = await Category.find({
     $or: subgenreFilters,
   }).lean();
 
-  const titleRegex = new RegExp(buildSearchPattern(value, { exact: true }), 'i');
+  const titleRegex = new RegExp(
+    buildSearchPattern(value, { exact: true }),
+    "i",
+  );
 
   for (const category of categories) {
-    const subgenre = category.subgenres?.find((item) =>
-      item.slug === value ||
-      item._id?.toString() === value ||
-      titleRegex.test(item.title?.uz || '') ||
-      titleRegex.test(item.title?.ru || '') ||
-      titleRegex.test(item.title?.en || '')
+    const subgenre = category.subgenres?.find(
+      (item) =>
+        item.slug === value ||
+        item._id?.toString() === value ||
+        titleRegex.test(item.title?.uz || "") ||
+        titleRegex.test(item.title?.ru || "") ||
+        titleRegex.test(item.title?.en || ""),
     );
 
     if (subgenre) return { category, subgenre };
@@ -160,8 +171,12 @@ const buildRelationFilters = async (Model, values) => {
 
   if (!relationQuery.length) return { ids: objectIds, bookIds: [] };
 
-  const relations = await Model.find({ $or: relationQuery }).select('_id books').lean();
-  const ids = [...new Set([...objectIds, ...relations.map((item) => item._id.toString())])];
+  const relations = await Model.find({ $or: relationQuery })
+    .select("_id books")
+    .lean();
+  const ids = [
+    ...new Set([...objectIds, ...relations.map((item) => item._id.toString())]),
+  ];
   const bookIds = [
     ...new Set(
       relations
@@ -187,8 +202,24 @@ const withWishlistField = (product, wishlistSet) => {
  */
 exports.getAllProducts = async (req, res, next) => {
   try {
-    const { keyword, category, author, publisher, publish, minPrice, maxPrice, sort, page = 1, limit = 12, subCategoryId, subgenreId, subgenre, language, contentLanguage } = req.query;
-    
+    const {
+      keyword,
+      category,
+      author,
+      publisher,
+      publish,
+      minPrice,
+      maxPrice,
+      sort,
+      page = 1,
+      limit = 12,
+      subCategoryId,
+      subgenreId,
+      subgenre,
+      language,
+      contentLanguage,
+    } = req.query;
+
     let query = { isActive: true };
 
     const andFilters = [];
@@ -196,14 +227,14 @@ exports.getAllProducts = async (req, res, next) => {
     if (keyword) {
       andFilters.push({
         $or: [
-        { "title.uz": buildSearchRegex(keyword) },
-        { "title.ru": buildSearchRegex(keyword) },
-        { "title.en": buildSearchRegex(keyword) },
-        { "description.uz": buildSearchRegex(keyword) },
-        { "description.ru": buildSearchRegex(keyword) },
-        { "description.en": buildSearchRegex(keyword) },
-        { "publisher.name": buildSearchRegex(keyword) },
-        { "author.name": buildSearchRegex(keyword) },
+          { "title.uz": buildSearchRegex(keyword) },
+          { "title.ru": buildSearchRegex(keyword) },
+          { "title.en": buildSearchRegex(keyword) },
+          { "description.uz": buildSearchRegex(keyword) },
+          { "description.ru": buildSearchRegex(keyword) },
+          { "description.en": buildSearchRegex(keyword) },
+          { "publisher.name": buildSearchRegex(keyword) },
+          { "author.name": buildSearchRegex(keyword) },
         ],
       });
     }
@@ -230,7 +261,9 @@ exports.getAllProducts = async (req, res, next) => {
       }
 
       if (resolvedCategory) {
-        const categoryNames = getLocalizedValues(resolvedCategory.title || resolvedCategory.name);
+        const categoryNames = getLocalizedValues(
+          resolvedCategory.title || resolvedCategory.name,
+        );
         genreFilters.push(...buildNameFilters(categoryNames));
 
         const subgenreBookIds = (resolvedCategory.subgenres || [])
@@ -260,7 +293,9 @@ exports.getAllProducts = async (req, res, next) => {
       );
 
       if (resolvedSubgenre) {
-        const subgenreNames = getLocalizedValues(resolvedSubgenre.subgenre.title || resolvedSubgenre.subgenre.name);
+        const subgenreNames = getLocalizedValues(
+          resolvedSubgenre.subgenre.title || resolvedSubgenre.subgenre.name,
+        );
         genreFilters.push(...buildNameFilters(subgenreNames));
 
         if (resolvedSubgenre.subgenre._id) {
@@ -304,7 +339,9 @@ exports.getAllProducts = async (req, res, next) => {
     if (selectedPublisher) {
       const publisherList = parseList(selectedPublisher);
       const defaultPublisher = await Publisher.findOne().lean();
-      const publisherCount = defaultPublisher ? await Publisher.countDocuments() : 0;
+      const publisherCount = defaultPublisher
+        ? await Publisher.countDocuments()
+        : 0;
       const matchesDefaultPublisher =
         publisherList.length === 1 &&
         publisherCount === 1 &&
@@ -324,7 +361,10 @@ exports.getAllProducts = async (req, res, next) => {
           ],
         });
       } else {
-        const publisherFilter = await buildRelationFilters(Publisher, publisherList);
+        const publisherFilter = await buildRelationFilters(
+          Publisher,
+          publisherList,
+        );
         const publisherOrFilters = [];
 
         if (publisherFilter.ids.length) {
@@ -356,34 +396,37 @@ exports.getAllProducts = async (req, res, next) => {
     }
 
     let sortBy = { createdAt: -1, _id: -1 };
-    if (sort === 'price_asc') sortBy = { price: 1, _id: -1 };
-    if (sort === 'price_desc') sortBy = { price: -1, _id: -1 };
-    if (sort === 'rating') sortBy = { ratingAvg: -1, _id: -1 };
+    if (sort === "price_asc") sortBy = { price: 1, _id: -1 };
+    if (sort === "price_desc") sortBy = { price: -1, _id: -1 };
+    if (sort === "rating") sortBy = { ratingAvg: -1, _id: -1 };
 
     const skip = (page - 1) * limit;
 
     const [products, total] = await Promise.all([
       Product.find(query)
-        .populate('category', CATEGORY_SELECT)
-        .populate('author')
-        .populate('publisher')
+        .populate("category", CATEGORY_SELECT)
+        .populate("author")
+        .populate("publisher")
         .sort(sortBy)
         .skip(skip)
         .limit(Number(limit)),
-      Product.countDocuments(query)
+      Product.countDocuments(query),
     ]);
 
     const hydratedProducts = await hydrateProductRelations(products);
-    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
+    const discountedProducts =
+      await applyActiveDiscountsToProducts(hydratedProducts);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(res, 200, true, "Mahsulotlar ro'yxati", {
-      products: discountedProducts.map((product) => withWishlistField(product, wishlistSet)),
+      products: discountedProducts.map((product) =>
+        withWishlistField(product, wishlistSet),
+      ),
       pagination: {
         total,
         page: Number(page),
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);
@@ -406,16 +449,19 @@ exports.getRelatedProducts = async (req, res, next) => {
     const related = await Product.find({
       isActive: true,
       category: product.category,
-      ...(product.subCategoryId ? { subCategoryId: product.subCategoryId } : {}),
-      _id: { $ne: product._id } 
+      ...(product.subCategoryId
+        ? { subCategoryId: product.subCategoryId }
+        : {}),
+      _id: { $ne: product._id },
     })
-    .limit(4)
-    .populate('category', CATEGORY_SELECT)
-    .populate('author')
-    .populate('publisher');
+      .limit(4)
+      .populate("category", CATEGORY_SELECT)
+      .populate("author")
+      .populate("publisher");
 
     const hydratedRelated = await hydrateProductRelations(related);
-    const discountedRelated = await applyActiveDiscountsToProducts(hydratedRelated);
+    const discountedRelated =
+      await applyActiveDiscountsToProducts(hydratedRelated);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(
@@ -423,9 +469,13 @@ exports.getRelatedProducts = async (req, res, next) => {
       200,
       true,
       "O'xshash mahsulotlar",
-      discountedRelated.map((product) => withWishlistField(product, wishlistSet)),
+      discountedRelated.map((product) =>
+        withWishlistField(product, wishlistSet),
+      ),
     );
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -435,12 +485,13 @@ exports.getRelatedProducts = async (req, res, next) => {
 exports.getNewArrivals = async (req, res, next) => {
   try {
     const products = await Product.find({ isActive: true })
-      .sort('-createdAt')
-      .limit(8)
-      .populate('author')
-      .populate('publisher');
+      .sort("-createdAt")
+      .limit(10)
+      .populate("author")
+      .populate("publisher");
     const hydratedProducts = await hydrateProductRelations(products);
-    const discountedProducts = await applyActiveDiscountsToProducts(hydratedProducts);
+    const discountedProducts =
+      await applyActiveDiscountsToProducts(hydratedProducts);
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(
@@ -448,9 +499,13 @@ exports.getNewArrivals = async (req, res, next) => {
       200,
       true,
       "Yangi kelgan kitoblar",
-      discountedProducts.map((product) => withWishlistField(product, wishlistSet)),
+      discountedProducts.map((product) =>
+        withWishlistField(product, wishlistSet),
+      ),
     );
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 // 4. Mahsulotni ID yoki Slug bo'yicha olish (Detailed View)
@@ -458,7 +513,7 @@ exports.getNewArrivals = async (req, res, next) => {
 exports.getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     let query;
     if (id.match(/^[0-9a-fA-F]{24}$/)) {
       query = { _id: id, isActive: true };
@@ -467,24 +522,33 @@ exports.getProductById = async (req, res, next) => {
     }
 
     const product = await Product.findOne(query)
-      .populate('category', CATEGORY_SELECT)
-      .populate('author', 'name slug image')
-      .populate('publisher', 'name slug image');
-    
+      .populate("category", CATEGORY_SELECT)
+      .populate("author", "name slug image")
+      .populate("publisher", "name slug image");
+
     if (!product) {
       return apiResponse(res, 404, false, "Mahsulot topilmadi");
     }
-    
+
     const hydratedProduct = await hydrateProductRelations(product);
-    const discountedProduct = await applyActiveDiscountsToProducts(hydratedProduct);
+    const discountedProduct =
+      await applyActiveDiscountsToProducts(hydratedProduct);
     const wishlistSet = getWishlistSet(req);
 
-    apiResponse(res, 200, true, "Mahsulot ma'lumotlari", withWishlistField(discountedProduct, wishlistSet));
+    apiResponse(
+      res,
+      200,
+      true,
+      "Mahsulot ma'lumotlari",
+      withWishlistField(discountedProduct, wishlistSet),
+    );
   } catch (error) {
     console.error("Error in getProductById:", error);
     next(error);
   }
 };
+
+// 5. Korilgan maxsulotlarni hisoblash uchun
 
 exports.trackProductView = async (req, res, next) => {
   try {
@@ -510,6 +574,110 @@ exports.trackProductView = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Error in trackProductView:", error);
+    next(error);
+  }
+};
+
+// 6. Random kitoblarni chiqarish uhcun
+
+exports.getRandomProducts = async (req, res, next) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 5, 1), 20);
+    const minPrice = Math.max(Number(req.query.minPrice) || 0, 0);
+
+    const sampledProducts = await Product.aggregate([
+      {
+        $match: {
+          isActive: true,
+          stock: { $gt: 0 },
+          price: { $gte: minPrice },
+        },
+      },
+      {
+        $sample: { size: limit },
+      },
+      {
+        $project: {
+          title: 1,
+          slug: 1,
+          price: 1,
+          discountPrice: 1,
+          stock: 1,
+          images: 1,
+          image: 1,
+          author: 1,
+          publisher: 1,
+          ratingAvg: 1,
+          ratingCount: 1,
+          views: 1,
+          viewsCount: 1,
+          details: 1,
+        },
+      },
+    ]);
+
+    const products = await Product.populate(sampledProducts, [
+      {
+        path: "author",
+        select: "name slug",
+      },
+      {
+        path: "publisher",
+        select: "name slug",
+      },
+    ]);
+
+    const discountedProducts = await applyActiveDiscountsToProducts(products);
+
+    const wishlistSet = getWishlistSet(req);
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Tasodifiy kitoblar",
+      discountedProducts.map((product) =>
+        withWishlistField(product, wishlistSet),
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 7. Kop korilgan kitoblarni chiqarish
+
+exports.getMostViewed = async (req, res, next) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 20);
+
+    const products = await Product.find({ isActive: true })
+      .sort({
+        views: -1,
+        createdAt: -1,
+      })
+      .limit(limit)
+      .populate("category", CATEGORY_SELECT)
+      .populate("author")
+      .populate("publisher");
+
+    const hydratedProducts = await hydrateProductRelations(products);
+
+    const discountedProducts =
+      await applyActiveDiscountsToProducts(hydratedProducts);
+
+    const wishlistSet = getWishlistSet(req);
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Eng ko'p ko'rilgan kitoblar",
+      discountedProducts.map((product) =>
+        withWishlistField(product, wishlistSet),
+      ),
+    );
+  } catch (error) {
     next(error);
   }
 };

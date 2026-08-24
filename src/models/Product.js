@@ -154,6 +154,8 @@ ProductSchema.index({ categories: 1 });
 ProductSchema.index({ subCategoryIds: 1 });
 ProductSchema.index({ author: 1 });
 ProductSchema.index({ publisher: 1 });
+ProductSchema.index({ isActive: 1, stock: 1, price: 1 });
+ProductSchema.index({ isActive: 1, views: -1, createdAt: -1 });
 
 const removedExternalProductFields = [
   ["barcode", "Normilize"],

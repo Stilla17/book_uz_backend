@@ -12,6 +12,7 @@ const {
   logMoyskladError,
   requestWithRetry,
 } = require("./moyskladClient");
+const { calculateRetailStock } = require("./moyskladStock");
 
 const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
@@ -278,13 +279,7 @@ const syncMoyskladProducts = async (options = {}) => {
           const syncedAt = new Date();
           const stockByStore = await fetchBranchStocks(assortment.meta?.href);
           const branchStocks = buildBranchStocks(stockByStore, syncedAt);
-          const totalAvailable = Math.max(
-            branchStocks.reduce(
-              (total, item) => total + item.available,
-              0,
-            ),
-            0,
-          );
+          const totalAvailable = calculateRetailStock(branchStocks);
 
           updateFields.stock = totalAvailable;
           updateFields.branchStocks = branchStocks;
