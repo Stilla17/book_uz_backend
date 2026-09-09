@@ -3,16 +3,8 @@ const User = require('../../models/User');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 
-const CASH_REVENUE_STATUSES = ['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED'];
 const REVENUE_ORDER_MATCH = {
-  status: { $ne: 'CANCELLED' },
-  $or: [
-    { paymentStatus: 'PAID' },
-    {
-      paymentType: 'CASH',
-      status: { $in: CASH_REVENUE_STATUSES },
-    },
-  ],
+  paymentStatus: 'PAID',
 };
 
 /**

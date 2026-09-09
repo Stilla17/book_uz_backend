@@ -95,6 +95,12 @@ const normalizePayload = (payload = {}) => {
     normalized.barcode = toTrimmedString(payload.barcode);
   }
 
+  if (payload.moyskladExternalCode !== undefined) {
+    normalized.moyskladExternalCode = toTrimmedString(
+      payload.moyskladExternalCode,
+    );
+  }
+
   if (payload.author !== undefined) {
     normalized.author = normalizeAuthorIds(payload.author);
   }
@@ -273,7 +279,8 @@ const validateCatalogSelections = async (categoryValues, subCategoryValues) => {
     );
     if (category.subgenres.length && !selectedForCategory.length) {
       return {
-        error: "Har bir tanlangan kategoriya uchun kamida bitta subkategoriya tanlang",
+        error:
+          "Har bir tanlangan kategoriya uchun kamida bitta subkategoriya tanlang",
       };
     }
     normalizedSubCategoryIds.push(
@@ -322,15 +329,17 @@ const syncBookRelations = async (
     .map(getIdString)
     .filter(Boolean);
 
-  const previousAuthorIds = (Array.isArray(previousProduct.author)
-    ? previousProduct.author
-    : [previousProduct.author]
+  const previousAuthorIds = (
+    Array.isArray(previousProduct.author)
+      ? previousProduct.author
+      : [previousProduct.author]
   )
     .map(getIdString)
     .filter(Boolean);
-  const nextAuthorIds = (Array.isArray(nextProduct.author)
-    ? nextProduct.author
-    : [nextProduct.author]
+  const nextAuthorIds = (
+    Array.isArray(nextProduct.author)
+      ? nextProduct.author
+      : [nextProduct.author]
   )
     .map(getIdString)
     .filter(Boolean);
@@ -416,6 +425,9 @@ const getAllProducts = async (req, res, next) => {
       publisher,
       publish,
       barcode,
+      stockFilter,
+      sortBy,
+      sortOrder,
       subCategoryId,
       subgenreId,
       subgenre,
@@ -424,6 +436,19 @@ const getAllProducts = async (req, res, next) => {
     let filter = {};
     const searchKeyword = toTrimmedString(search);
     const barcodeValue = toTrimmedString(barcode);
+
+    if (stockFilter === "low") filter.stock = { $gt: 0, $lt: 10 };
+    if (stockFilter === "available") filter.stock = { $gte: 10 };
+    if (stockFilter === "out") {
+      filter.$and = [{ $or: [{ stock: { $lte: 0 } }, { stock: null }] }];
+    }
+
+    const direction = sortOrder === "desc" ? -1 : 1;
+    const sortOptions = sortBy === "price"
+      ? { price: direction, _id: direction }
+      : sortBy === "title"
+        ? { "title.uz": direction, _id: direction }
+        : { createdAt: -1, _id: -1 };
 
     if (searchKeyword) {
       filter.$or = await buildProductSearchFilters(searchKeyword);
@@ -461,15 +486,16 @@ const getAllProducts = async (req, res, next) => {
       ];
     }
 
-    const products = await Product.find(filter)
-      .populate("category", "title name subgenres")
-      .populate("author", "name")
-      .populate("publisher", "name slug image")
-      .sort("-createdAt")
-      .skip(paginationParams.skip)
-      .limit(paginationParams.limit);
-
-    const total = await Product.countDocuments(filter);
+    const [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate("category", "title name subgenres")
+        .populate("author", "name")
+        .populate("publisher", "name slug image")
+        .sort(sortOptions)
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit),
+      Product.countDocuments(filter),
+    ]);
 
     const productsWithDetails = products.map((product) => ({
       ...product.toObject(),
@@ -555,12 +581,7 @@ const createProduct = async (req, res, next) => {
 
     const slug = slugify(payload.slug || title.uz);
     if (!slug) {
-      return apiResponse(
-        res,
-        400,
-        false,
-        "Slug bo'sh bo'lishi mumkin emas",
-      );
+      return apiResponse(res, 400, false, "Slug bo'sh bo'lishi mumkin emas");
     }
 
     const duplicateSlug = await findDuplicateSlug(slug);
@@ -743,12 +764,7 @@ const updateProduct = async (req, res, next) => {
     if (hasSlugField || (title && title.uz)) {
       const nextSlug = slugify(hasSlugField ? payload.slug : title.uz);
       if (!nextSlug) {
-        return apiResponse(
-          res,
-          400,
-          false,
-          "Slug bo'sh bo'lishi mumkin emas",
-        );
+        return apiResponse(res, 400, false, "Slug bo'sh bo'lishi mumkin emas");
       }
 
       const duplicateSlug = await findDuplicateSlug(nextSlug, id);
@@ -941,6 +957,72 @@ const searchProducts = async (req, res) => {
   }
 };
 
+const getProductStats = async (req, res, next) => {
+  try {
+    const [stats] = await Product.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: {
+            $sum: {
+              $cond: [{ $eq: ["$isActive", true] }, 1, 0],
+            },
+          },
+          low: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gt: [{ $ifNull: ["$stock", 0] }, 0] },
+                    { $lt: [{ $ifNull: ["$stock", 0] }, 10] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          available: {
+            $sum: {
+              $cond: [{ $gte: [{ $ifNull: ["$stock", 0] }, 10] }, 1, 0],
+            },
+          },
+          out: {
+            $sum: {
+              $cond: [{ $lte: [{ $ifNull: ["$stock", 0] }, 0] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          total: 1,
+          active: 1,
+          inactive: { $subtract: ["$total", "$active"] },
+          low: 1,
+          available: 1,
+          out: 1,
+        },
+      },
+    ]);
+
+    res.json({
+      data: stats ?? {
+        total: 0,
+        active: 0,
+        inactive: 0,
+        low: 0,
+        available: 0,
+        out: 0,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   createProduct,
@@ -951,4 +1033,5 @@ module.exports = {
   updateStock,
   toggleTopStatus,
   searchProducts,
+  getProductStats,
 };

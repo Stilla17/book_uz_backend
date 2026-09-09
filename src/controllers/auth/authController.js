@@ -3,7 +3,9 @@ const apiResponse = require("../../utils/apiResponse");
 
 // Cookie sozlamalari (Production va Development uchun)
 const durationToMs = (duration, fallbackMs) => {
-  const match = String(duration || "").trim().match(/^(\d+)(ms|s|m|h|d)$/i);
+  const match = String(duration || "")
+    .trim()
+    .match(/^(\d+)(ms|s|m|h|d)$/i);
   if (!match) return fallbackMs;
 
   const multipliers = {
@@ -21,10 +23,7 @@ const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "Lax",
-  maxAge: durationToMs(
-    process.env.JWT_REFRESH_EXPIRE,
-    7 * 24 * 60 * 60 * 1000,
-  ),
+  maxAge: durationToMs(process.env.JWT_REFRESH_EXPIRE, 7 * 24 * 60 * 60 * 1000),
 };
 
 /**
@@ -100,13 +99,12 @@ const loginWithPhone = async (req, res, next) => {
   try {
     const { phone, name, wishlist, wishlistProductIds, productIds } = req.body;
 
-    const { user, accessToken, refreshToken } = await authService.loginWithPhone(
-      {
+    const { user, accessToken, refreshToken } =
+      await authService.loginWithPhone({
         phone,
         name,
         wishlist: wishlistProductIds || productIds || wishlist,
-      },
-    );
+      });
 
     res.cookie("refreshToken", refreshToken, cookieOptions);
 
@@ -123,7 +121,6 @@ const loginWithPhone = async (req, res, next) => {
 const verifyPhoneOtp = async (req, res, next) => {
   try {
     const { phone, otp, wishlist, wishlistProductIds, productIds } = req.body;
-
     const { user, accessToken, refreshToken } =
       await authService.verifyPhoneOtp({
         phone,
@@ -133,7 +130,7 @@ const verifyPhoneOtp = async (req, res, next) => {
 
     res.cookie("refreshToken", refreshToken, cookieOptions);
 
-    apiResponse(
+    return apiResponse(
       res,
       200,
       true,
@@ -143,6 +140,67 @@ const verifyPhoneOtp = async (req, res, next) => {
         accessToken,
       },
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendMobilePhoneOtp = async (req, res, next) => {
+  try {
+    const result = await authService.sendMobilePhoneOtp({
+      phone: req.body.phone,
+    });
+
+    return apiResponse(
+      res,
+      200,
+      true,
+      "Tasdiqlash kodi telefon raqamga yuborildi",
+      result,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const verifyMobilePhoneOtp = async (req, res, next) => {
+  try {
+    const { phone, otp, wishlist, wishlistProductIds, productIds } = req.body;
+    const result = await authService.verifyMobilePhoneOtp({
+      phone,
+      otp,
+      wishlist: wishlistProductIds || productIds || wishlist,
+    });
+
+    if (!result.isNewUser) {
+      res.cookie("refreshToken", result.session.refreshToken, cookieOptions);
+    }
+
+    return apiResponse(
+      res,
+      200,
+      true,
+      result.isNewUser
+        ? "Qo'shimcha ma'lumotlarni kiriting"
+        : "Telefon raqam tasdiqlandi",
+      result,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const completeRegistration = async (req, res, next) => {
+  try {
+    const result = await authService.completeRegistration(req.body);
+
+    res.cookie("refreshToken", result.refreshToken, cookieOptions);
+
+    return apiResponse(res, 200, true, "Ro'yxatdan o'tish yakunlandi", {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
   } catch (error) {
     next(error);
   }
@@ -206,4 +264,7 @@ module.exports = {
   sendPhoneOtp,
   loginWithPhone,
   verifyPhoneOtp,
+  sendMobilePhoneOtp,
+  verifyMobilePhoneOtp,
+  completeRegistration,
 };

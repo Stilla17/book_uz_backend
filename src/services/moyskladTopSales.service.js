@@ -9,8 +9,6 @@ const {
   getAxiosStatus,
   getMoyskladErrorMessage,
   requestWithRetry,
-  cleanBarcode,
-  getMoyskladBarcode,
   formatMoyskladDate,
 } = require("../utils/moyskladClient");
 
@@ -107,25 +105,19 @@ const buildLocalProductLookup = async () => {
   const products = await Product.find(
     {
       isActive: true,
-      $or: [
-        { moyskladId: { $exists: true, $ne: "" } },
-        { barcode: { $exists: true, $ne: "" } },
-      ],
+      moyskladId: { $exists: true, $ne: "" },
     },
     "barcode moyskladId",
   ).lean();
-  const byBarcode = new Map();
   const byMoyskladId = new Map();
 
   products.forEach((product) => {
-    const barcode = cleanBarcode(product.barcode);
-    if (barcode) byBarcode.set(barcode, product._id);
     if (product.moyskladId) {
-      byMoyskladId.set(product.moyskladId, product._id);
+      byMoyskladId.set(product.moyskladId, product);
     }
   });
 
-  return { byBarcode, byMoyskladId };
+  return byMoyskladId;
 };
 
 const getAssortmentId = (assortment = {}) => {
@@ -176,10 +168,9 @@ const calculateTopSalesPeriods = async (periods) => {
     for (const position of positions) {
       const assortment = position.assortment || {};
       const moyskladId = getAssortmentId(assortment);
-      const barcode = getMoyskladBarcode(assortment);
-      const productId =
-        localProducts.byMoyskladId.get(moyskladId) ||
-        localProducts.byBarcode.get(barcode);
+      const localProduct = localProducts.get(moyskladId);
+      const productId = localProduct?._id;
+      const barcode = localProduct?.barcode || "";
 
       if (!productId) continue;
 
@@ -283,6 +274,10 @@ const getCachedTopSales = async (period = "week") => {
     .populate({
       path: "products.product",
       match: { isActive: true },
+      populate: {
+        path: "author",
+        select: "name slug",
+      },
     })
     .lean();
 
@@ -290,11 +285,21 @@ const getCachedTopSales = async (period = "week") => {
 
   const products = cache.products
     .filter((item) => item.product)
-    .map((item) => ({
-      ...item.product,
-      barcode: item.barcode || item.product.barcode,
-      soldQuantity: item.soldQuantity,
-    }));
+    .map((item) => {
+      const authors = Array.isArray(item.product.author)
+        ? item.product.author
+        : [item.product.author].filter(Boolean);
+
+      return {
+        ...item.product,
+        authorName: authors
+          .map((author) => author?.name)
+          .filter(Boolean)
+          .join(", "),
+        barcode: item.barcode || item.product.barcode,
+        soldQuantity: item.soldQuantity,
+      };
+    });
 
   return {
     ...cache,

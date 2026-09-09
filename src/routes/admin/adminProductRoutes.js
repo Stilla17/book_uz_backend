@@ -3,6 +3,7 @@ const router = express.Router();
 const productController = require("../../controllers/admin/productController");
 const { protect, restrictTo } = require("../../middlewares/auth");
 const upload = require("../../middlewares/upload"); // Rasmlar uchun
+const Product = require("../../models/Product");
 
 router.use(protect, restrictTo("admin"));
 
@@ -11,17 +12,14 @@ router.get("/", productController.getAllProducts); // YANGI QO'SHILDI
 
 // Search route
 router.get("/search", productController.searchProducts);
+router.get("/stats", productController.getProductStats);
 router.get("/:id", productController.getProductById); // YANGI QO'SHILDI (agar kerak bo'lsa)
 
 // POST routes
 router.post("/", upload.single("image"), productController.createProduct);
 
 // PATCH routes
-router.patch(
-  "/:id",
-  upload.single("image"),
-  productController.updateProduct,
-);
+router.patch("/:id", upload.single("image"), productController.updateProduct);
 router.patch("/:id/stock", productController.updateStock);
 router.patch("/:id/toggle-top", productController.toggleTopStatus);
 

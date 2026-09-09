@@ -7,6 +7,7 @@ const buildDiscountPayload = (body) => {
     type,
     value,
     discountPercentage,
+    remainingDiscountPercentage,
     targetType,
     products,
     publishers,
@@ -29,6 +30,9 @@ const buildDiscountPayload = (body) => {
   if (startDate !== undefined) payload.startDate = startDate;
   if (endDate !== undefined) payload.endDate = endDate;
   if (isActive !== undefined) payload.isActive = isActive;
+  if (remainingDiscountPercentage !== undefined) {
+    payload.remainingDiscountPercentage = remainingDiscountPercentage;
+  }
 
   return payload;
 };

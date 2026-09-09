@@ -37,6 +37,13 @@ const ProductSchema = new mongoose.Schema(
     ],
     barcode: { type: String, trim: true, unique: true },
     moyskladId: { type: String, trim: true, unique: true, sparse: true },
+    moyskladExternalCode: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+      set: (value) => value?.toString().trim() || undefined,
+    },
     ikpuCode: {
       type: String,
       trim: true,
@@ -50,7 +57,6 @@ const ProductSchema = new mongoose.Schema(
       default: "other",
     },
     numberOfPage: { type: Number, min: 0 },
-    weight: { type: String, trim: true },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",

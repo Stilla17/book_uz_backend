@@ -46,7 +46,9 @@ const isDiscountApplicable = (product, discount) => {
 
 const applyDiscountToProduct = (product, discounts = []) => {
   const productObject =
-    typeof product.toObject === "function" ? product.toObject() : { ...product };
+    typeof product.toObject === "function"
+      ? product.toObject()
+      : { ...product };
   const price = Number(productObject.price || 0);
   const existingDiscountPrice = Number(productObject.discountPrice || 0);
 
@@ -57,12 +59,15 @@ const applyDiscountToProduct = (product, discounts = []) => {
       : price;
 
   discounts.forEach((discount) => {
-    if (!isDiscountApplicable(productObject, discount)) return;
+    const applicableDiscount = getApplicableDiscount(productObject, discount);
 
-    const discountPrice = calculatePriceByDiscount(price, discount);
+    if (!applicableDiscount) return;
+
+    const discountPrice = calculatePriceByDiscount(price, applicableDiscount);
+
     if (discountPrice < bestDiscountPrice) {
       bestDiscountPrice = discountPrice;
-      bestDiscount = discount;
+      bestDiscount = applicableDiscount;
     }
   });
 
@@ -79,6 +84,7 @@ const applyDiscountToProduct = (product, discounts = []) => {
           type: bestDiscount.type,
           value: bestDiscount.value,
           targetType: bestDiscount.targetType,
+          isRemainingDiscount: Boolean(bestDiscount.isRemainingDiscount),
           minOrderAmount: bestDiscount.minOrderAmount || 0,
           startDate: bestDiscount.startDate,
           endDate: bestDiscount.endDate,
@@ -107,6 +113,44 @@ const getEffectiveProductPrice = async (product) => {
   return discountedProduct.discountPrice > 0
     ? discountedProduct.discountPrice
     : discountedProduct.price;
+};
+
+const getApplicableDiscount = (product, discount) => {
+  const productId = toId(product._id || product.id);
+  const publisherId = toId(product.publisher);
+
+  let isSelected = false;
+
+  if (discount.targetType === "PRODUCTS") {
+    isSelected = (discount.products || []).some((id) => toId(id) === productId);
+  }
+
+  if (discount.targetType === "PUBLISHERS") {
+    isSelected = (discount.publishers || []).some(
+      (id) => toId(id) === publisherId,
+    );
+  }
+
+  if (isSelected) {
+    return {
+      ...discount,
+      type: discount.type,
+      value: discount.value,
+    };
+  }
+
+  const remainingPercentage = Number(discount.remainingDiscountPercentage || 0);
+
+  if (remainingPercentage <= 0) {
+    return null;
+  }
+
+  return {
+    ...discount,
+    type: "PERCENT",
+    value: remainingPercentage,
+    isRemainingDiscount: true,
+  };
 };
 
 module.exports = {

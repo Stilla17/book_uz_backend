@@ -59,7 +59,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-
     notifications: {
       email: { type: Boolean, default: true },
       sms: { type: Boolean, default: false },
@@ -88,6 +87,38 @@ const UserSchema = new mongoose.Schema(
         ip: String,
       },
     ],
+    profileCompleted: {
+      type: Boolean,
+      default: true,
+    },
+
+    authProvider: {
+      type: String,
+      enum: ["phone", "google", "telegram", "email"],
+      default: "email",
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    telegramId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    region: {
+      type: String,
+      trim: true,
+    },
+
+    district: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

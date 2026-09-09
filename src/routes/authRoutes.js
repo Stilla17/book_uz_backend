@@ -21,6 +21,14 @@ router.post("/phone/send-otp", authController.sendPhoneOtp);
 // Telefon OTP tasdiqlash va login: POST /api/v1/auth/phone/verify-otp
 router.post("/phone/verify-otp", authController.verifyPhoneOtp);
 
+// Mobil ilova uchun alohida OTP onboarding endpointlari
+router.post("/mobile/phone/send-otp", authController.sendMobilePhoneOtp);
+router.post("/mobile/phone/verify-otp", authController.verifyMobilePhoneOtp);
+router.post(
+  "/mobile/complete-registration",
+  authController.completeRegistration,
+);
+
 // 3. Tokenni yangilash: POST /api/v1/auth/refresh
 router.post("/refresh", authController.refresh);
 

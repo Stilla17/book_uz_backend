@@ -104,31 +104,6 @@ const groupByExternalCode = (assortmentRows) => {
   return result;
 };
 
-const ensureBookuzExternalCode = async (assortment, bookuzId) => {
-  if (assortment.externalCode === bookuzId) {
-    return false;
-  }
-
-  if (!assortment.meta?.href) {
-    throw new Error(
-      `MoySklad meta.href topilmadi (${assortment.id || bookuzId})`,
-    );
-  }
-
-  await requestWithRetry(
-    () =>
-      axios.put(
-        assortment.meta.href,
-        { externalCode: bookuzId },
-        { headers, timeout: 30000 },
-      ),
-    `MoySklad externalCode yangilash (${assortment.id})`,
-  );
-
-  assortment.externalCode = bookuzId;
-  return true;
-};
-
 const syncMoyskladProducts = async (options = {}) => {
   if (isSyncing) {
     console.log("MoySklad sinxronizatsiyasi hali davom etmoqda");
@@ -145,7 +120,7 @@ const syncMoyskladProducts = async (options = {}) => {
       : {};
     const myProducts = await Product.find(
       productFilter,
-      "_id price barcode cover moyskladId title",
+      "_id price moyskladId moyskladExternalCode title",
     ).lean();
 
     if (!myProducts.length) {
@@ -162,33 +137,46 @@ const syncMoyskladProducts = async (options = {}) => {
       linkedRows.map((assortment) => [assortment.id, assortment]),
     );
 
-    // moyskladId yo'qolgan yoki hali yozilmagan mahsulotlarni faqat Book.uz
-    // _id saqlangan externalCode orqali tiklaymiz. ISBN/barcode ishlatilmaydi.
+    // moyskladId yo'qolgan yoki hali yozilmagan mahsulotlarni MoySklad'dagi
+    // real externalCode orqali tiklaymiz. ISBN/barcode ishlatilmaydi.
     const unresolvedProducts = myProducts.filter(
       (product) =>
         !product.moyskladId || !assortmentById.has(product.moyskladId),
     );
     const externalCodeRows = await fetchAssortmentByField(
       "externalCode",
-      unresolvedProducts.map((product) => product._id.toString()),
+      unresolvedProducts.map((product) => product.moyskladExternalCode),
     );
     const assortmentByExternalCode = groupByExternalCode(externalCodeRows);
     const claimedMoyskladIds = new Map();
-    const resolvedProducts = [];
-    const conflictedExternalCodes = new Set();
+    let resolvedProducts = [];
+    const conflictedProductIds = new Set();
 
     myProducts.forEach((product) => {
       const bookuzId = product._id.toString();
+      const expectedExternalCode = product.moyskladExternalCode;
       let assortment = product.moyskladId
         ? assortmentById.get(product.moyskladId)
         : null;
 
-      if (!assortment) {
+      if (
+        assortment &&
+        expectedExternalCode &&
+        assortment.externalCode !== expectedExternalCode
+      ) {
+        conflictedProductIds.add(bookuzId);
+        console.warn(
+          `MoySklad sync: ${bookuzId} externalCode mos emas (${expectedExternalCode} != ${assortment.externalCode || "bo'sh"})`,
+        );
+        return;
+      }
+
+      if (!assortment && expectedExternalCode) {
         const externalCodeMatches =
-          assortmentByExternalCode.get(bookuzId) || [];
+          assortmentByExternalCode.get(expectedExternalCode) || [];
 
         if (externalCodeMatches.length > 1) {
-          conflictedExternalCodes.add(bookuzId);
+          conflictedProductIds.add(bookuzId);
           return;
         }
 
@@ -199,8 +187,8 @@ const syncMoyskladProducts = async (options = {}) => {
 
       const claimedBy = claimedMoyskladIds.get(assortment.id);
       if (claimedBy && claimedBy !== bookuzId) {
-        conflictedExternalCodes.add(bookuzId);
-        conflictedExternalCodes.add(claimedBy);
+        conflictedProductIds.add(bookuzId);
+        conflictedProductIds.add(claimedBy);
         return;
       }
 
@@ -208,13 +196,31 @@ const syncMoyskladProducts = async (options = {}) => {
       resolvedProducts.push({ product, assortment, bookuzId });
     });
 
+    const claimedExternalCodes = new Map();
+    resolvedProducts.forEach(({ assortment, bookuzId }) => {
+      if (!assortment.externalCode) return;
+
+      const claimedBy = claimedExternalCodes.get(assortment.externalCode);
+      if (claimedBy && claimedBy !== bookuzId) {
+        conflictedProductIds.add(bookuzId);
+        conflictedProductIds.add(claimedBy);
+        return;
+      }
+
+      claimedExternalCodes.set(assortment.externalCode, bookuzId);
+    });
+    resolvedProducts = resolvedProducts.filter(
+      ({ bookuzId }) => !conflictedProductIds.has(bookuzId),
+    );
+
     const resolvedBookuzIds = new Set(
       resolvedProducts.map((resolved) => resolved.product._id.toString()),
     );
     const productsToAutoLink = myProducts.filter(
       (product) =>
         !resolvedBookuzIds.has(product._id.toString()) &&
-        !conflictedExternalCodes.has(product._id.toString()),
+        Boolean(product.moyskladExternalCode) &&
+        !conflictedProductIds.has(product._id.toString()),
     );
 
     for (const product of productsToAutoLink) {
@@ -225,8 +231,8 @@ const syncMoyskladProducts = async (options = {}) => {
         const claimedBy = claimedMoyskladIds.get(assortment.id);
 
         if (claimedBy && claimedBy !== bookuzId) {
-          conflictedExternalCodes.add(bookuzId);
-          conflictedExternalCodes.add(claimedBy);
+          conflictedProductIds.add(bookuzId);
+          conflictedProductIds.add(claimedBy);
           continue;
         }
 
@@ -244,28 +250,18 @@ const syncMoyskladProducts = async (options = {}) => {
     }
 
     let synchronizedCount = 0;
-    let externalCodeUpdatedCount = 0;
+    let externalCodeBackfilledCount = 0;
     let canSyncBranchStocks = true;
     const bulkOps = [];
 
-    for (const { product, assortment, bookuzId } of resolvedProducts) {
-      try {
-        const externalCodeUpdated = await ensureBookuzExternalCode(
-          assortment,
-          bookuzId,
-        );
-        if (externalCodeUpdated) externalCodeUpdatedCount += 1;
-      } catch (externalCodeError) {
-        logMoyskladError(
-          `MoySklad externalCode sync xatosi (${assortment.id})`,
-          externalCodeError,
-        );
-      }
-
+    for (const { product, assortment } of resolvedProducts) {
       const salePriceValue = assortment.salePrices?.[0]?.value;
       const numericSalePrice = Number(salePriceValue);
       const updateFields = {
         moyskladId: assortment.id,
+        ...(assortment.externalCode
+          ? { moyskladExternalCode: assortment.externalCode }
+          : {}),
         ...(salePriceValue !== null &&
         salePriceValue !== undefined &&
         Number.isFinite(numericSalePrice) &&
@@ -273,6 +269,10 @@ const syncMoyskladProducts = async (options = {}) => {
           ? { price: numericSalePrice / 100 }
           : {}),
       };
+
+      if (!product.moyskladExternalCode && assortment.externalCode) {
+        externalCodeBackfilledCount += 1;
+      }
 
       if (canSyncBranchStocks) {
         try {
@@ -313,9 +313,9 @@ const syncMoyskladProducts = async (options = {}) => {
       await Product.bulkWrite(bulkOps);
     }
 
-    if (conflictedExternalCodes.size) {
+    if (conflictedProductIds.size) {
       console.warn(
-        `MoySklad sync: ${conflictedExternalCodes.size} ta externalCode konflikti sabab o'tkazib yuborildi`,
+        `MoySklad sync: ${conflictedProductIds.size} ta mahsulot bog'lanish konflikti sabab o'tkazib yuborildi`,
       );
     }
 
@@ -327,7 +327,7 @@ const syncMoyskladProducts = async (options = {}) => {
     }
 
     console.log(
-      `MoySklad sync yakunlandi. ${synchronizedCount} ta mahsulot sinxronlandi, ${externalCodeUpdatedCount} ta externalCode Book.uz ID bilan yangilandi.`,
+      `MoySklad sync yakunlandi. ${synchronizedCount} ta mahsulot sinxronlandi, ${externalCodeBackfilledCount} ta externalCode Book.uz bazasiga saqlandi.`,
     );
   } catch (error) {
     logMoyskladError("MoySklad mahsulot sync xatosi", error);

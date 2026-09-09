@@ -61,6 +61,12 @@ const DiscountSchema = new mongoose.Schema(
         message: "Tugash sanasi boshlanish sanasidan keyin bo'lishi kerak",
       },
     },
+    remainingDiscountPercentage: {
+      type: Number,
+      default: 0,
+      min: [0, "Qolgan kitoblar chegirmasi 0 dan kam bo'lmasligi kerak"],
+      max: [100, "Qolgan kitoblar chegirmasi 100 dan oshmasligi kerak"],
+    },
     isActive: {
       type: Boolean,
       default: true,

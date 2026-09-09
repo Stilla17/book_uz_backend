@@ -24,7 +24,9 @@ const getMaximumBirthDate = () => {
     day: "2-digit",
   }).formatToParts(new Date());
   const values = Object.fromEntries(
-    parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]),
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
   );
 
   return `${Number(values.year) - MINIMUM_REGISTRATION_AGE}-${values.month}-${values.day}`;
@@ -39,7 +41,9 @@ const validateRegistrationBirthDate = (value) => {
   }
 
   const [, year, month, day] = match;
-  const parsedDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const parsedDate = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day)),
+  );
   const isValidDate =
     parsedDate.getUTCFullYear() === Number(year) &&
     parsedDate.getUTCMonth() === Number(month) - 1 &&
@@ -50,9 +54,7 @@ const validateRegistrationBirthDate = (value) => {
   }
 
   if (birthDate > getMaximumBirthDate()) {
-    throw createBadRequestError(
-      "Aniq yoshingizni kiriting",
-    );
+    throw createBadRequestError("Aniq yoshingizni kiriting");
   }
 
   return birthDate;
@@ -164,9 +166,10 @@ class AuthService {
     }
     const phoneDigits = normalizePhone(phone);
     const validatedBirthDate =
-      mode === "register" ? validateRegistrationBirthDate(birthDate) : birthDate;
+      mode === "register"
+        ? validateRegistrationBirthDate(birthDate)
+        : birthDate;
     let user = await User.findOne({ phone });
-
     if (mode === "login" && (!user || !user.isVerified)) {
       const error = new Error("Telefon raqami ro'yxatdan o'tmagan");
       error.statusCode = 404;
@@ -201,6 +204,43 @@ class AuthService {
 
     console.log(`Phone OTP for ${phone}: ${otp}`);
     return { phone };
+  }
+
+  async sendMobilePhoneOtp({ phone }) {
+    if (!isValidPhone(phone)) {
+      throw createBadRequestError(
+        "Telefon raqam formati noto'g'ri. Masalan +998901234567",
+      );
+    }
+
+    const formattedPhone = formatUzPhone(phone);
+    const phoneDigits = normalizePhone(formattedPhone);
+    let user = await User.findOne({ phone: formattedPhone });
+
+    if (!user) {
+      user = await User.create({
+        name: "Foydalanuvchi",
+        email: `phone-${phoneDigits}@bookuz.local`,
+        phone: formattedPhone,
+        isVerified: false,
+        profileCompleted: false,
+        authProvider: "phone",
+      });
+    }
+
+    const isNewUser = user.profileCompleted === false;
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    await OTP.deleteMany({ userId: user._id, type: "SMS" });
+    await OTP.create({ userId: user._id, otp, type: "SMS" });
+    await sendEskizSms(formattedPhone, buildPhoneOtpMessage(otp));
+
+    console.log(`Mobile phone OTP for ${formattedPhone}: ${otp}`);
+
+    return {
+      phone: formattedPhone,
+      isNewUser,
+    };
   }
 
   async loginWithPhone({ phone, name, wishlist }) {
@@ -284,6 +324,63 @@ class AuthService {
     return { user: sanitizeUser(user), ...tokens };
   }
 
+  async verifyMobilePhoneOtp({ phone, otp, wishlist }) {
+    const formattedPhone = formatUzPhone(phone);
+
+    if (!isValidPhone(formattedPhone)) {
+      throw createBadRequestError("Telefon raqam formati noto'g'ri");
+    }
+
+    const user = await User.findOne({ phone: formattedPhone });
+    if (!user) {
+      const error = new Error("Telefon raqamiga mos foydalanuvchi topilmadi");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const validOtp = await OTP.findOne({
+      userId: user._id,
+      otp,
+      type: "SMS",
+    });
+    if (!validOtp) {
+      throw createBadRequestError("OTP noto'g'ri yoki muddati tugagan");
+    }
+
+    await OTP.deleteOne({ _id: validOtp._id });
+    user.isVerified = true;
+
+    if (user.profileCompleted === false) {
+      await user.save();
+
+      return {
+        isNewUser: true,
+        provider: "phone",
+        registrationToken: this.generateRegistrationToken(user._id, "phone"),
+        profile: {
+          name: user.name === "Foydalanuvchi" ? undefined : user.name,
+          phone: user.phone,
+          image: user.avatar || undefined,
+          email: user.email?.endsWith("@bookuz.local") ? undefined : user.email,
+        },
+      };
+    }
+
+    const tokens = this.generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
+    await this.mergeWishlist(user, wishlist);
+    await user.save();
+
+    return {
+      isNewUser: false,
+      session: {
+        user: sanitizeUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    };
+  }
+
   async mergeWishlist(user, wishlist) {
     const productIds = normalizeWishlistProductIds(wishlist);
 
@@ -344,6 +441,113 @@ class AuthService {
     }
 
     return true;
+  }
+
+  generateRegistrationToken(userId, provider) {
+    const secret =
+      process.env.JWT_REGISTRATION_SECRET || process.env.JWT_ACCESS_SECRET;
+
+    if (!secret) {
+      throw new Error("Registration token maxfiy kaliti sozlanmagan");
+    }
+
+    return jwt.sign(
+      {
+        userId,
+        provider,
+        purpose: "complete-registration",
+      },
+      secret,
+      {
+        expiresIn: process.env.JWT_REGISTRATION_EXPIRE || "15m",
+      },
+    );
+  }
+
+  async completeRegistration({
+    registrationToken,
+    name,
+    phone,
+    birthDate,
+    region,
+    district,
+  }) {
+    const secret =
+      process.env.JWT_REGISTRATION_SECRET || process.env.JWT_ACCESS_SECRET;
+
+    if (!secret) {
+      throw new Error("Registration token maxfiy kaliti sozlanmagan");
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(registrationToken, secret);
+    } catch (_error) {
+      throw createBadRequestError(
+        "Registratsiya tokeni noto'g'ri yoki muddati tugagan",
+      );
+    }
+
+    if (payload.purpose !== "complete-registration" || !payload.userId) {
+      throw createBadRequestError("Registratsiya tokeni noto'g'ri");
+    }
+
+    const user = await User.findById(payload.userId);
+    if (!user) {
+      const error = new Error("Foydalanuvchi topilmadi");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (user.profileCompleted) {
+      throw createBadRequestError("Profil ma'lumotlari avval to'ldirilgan");
+    }
+
+    const normalizedName = String(name || "").trim();
+    const normalizedRegion = String(region || "").trim();
+    const normalizedDistrict = String(district || "").trim();
+    const formattedPhone = formatUzPhone(phone || user.phone);
+
+    if (normalizedName.length < 2) {
+      throw createBadRequestError(
+        "Ism familya kamida 2 ta belgidan iborat bo'lishi kerak",
+      );
+    }
+
+    if (!normalizedRegion || !normalizedDistrict) {
+      throw createBadRequestError("Viloyat va tumanni kiriting");
+    }
+
+    if (!isValidPhone(formattedPhone)) {
+      throw createBadRequestError(
+        "Telefon raqam formati noto'g'ri. Masalan +998901234567",
+      );
+    }
+
+    const phoneOwner = await User.findOne({
+      phone: formattedPhone,
+      _id: { $ne: user._id },
+    });
+    if (phoneOwner) {
+      throw createBadRequestError("Bu telefon raqami avval ro'yxatdan o'tgan");
+    }
+
+    user.name = normalizedName;
+    user.phone = formattedPhone;
+    user.birthDate = validateRegistrationBirthDate(birthDate);
+    user.region = normalizedRegion;
+    user.district = normalizedDistrict;
+    user.profileCompleted = true;
+    user.isVerified = true;
+
+    const tokens = this.generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
+    await user.save();
+
+    return {
+      user: sanitizeUser(user),
+      ...tokens,
+    };
   }
 }
 
