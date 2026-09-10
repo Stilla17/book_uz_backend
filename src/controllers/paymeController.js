@@ -460,20 +460,6 @@ async function getStatement(req, res) {
   return ok(res, id, { transactions });
 }
 
-async function changePassword(req, res) {
-  const { id, params = {} } = req.body;
-  const password = params.password || params.new_password || params.newPassword;
-
-  if (typeof password !== "string" || !password.trim()) {
-    return err(res, id, ERROR.ORDER_NOT_ALLOWED);
-  }
-
-  paymeConfig.PASSWORD = password.trim();
-  process.env.PAYME_PASSWORD = password.trim();
-
-  return ok(res, id, { success: true });
-}
-
 async function paymeWebhook(req, res) {
   try {
     const { id, method } = req.body;
@@ -496,8 +482,6 @@ async function paymeWebhook(req, res) {
         return checkTransaction(req, res);
       case "GetStatement":
         return getStatement(req, res);
-      case "ChangePassword":
-        return changePassword(req, res);
       default:
         console.warn("[payme] method not found", { method });
         return err(res, id, METHOD_NOT_FOUND);
@@ -538,7 +522,6 @@ module.exports = {
   cancelTransaction,
   checkTransaction,
   getStatement,
-  changePassword,
   paymeWebhook,
   paymeCheckout,
 };

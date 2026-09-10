@@ -47,6 +47,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const allowedOrigins = [
+  "https://book.uz",
+  "https://www.book.uz",
   "http://localhost:3000",
   "http://localhost:5173",
   "http://localhost:5174",

@@ -7,7 +7,16 @@ const OTP = require("../models/OTP");
 const { isValidPhone } = require("../utils/validator");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const sendEskizSms = require("../utils/sendEskizSms");
+let googleClient;
 
+const getGoogleClient = () => {
+  if (!googleClient) {
+    const { OAuth2Client } = require("google-auth-library");
+    googleClient = new OAuth2Client();
+  }
+
+  return googleClient;
+};
 const MINIMUM_REGISTRATION_AGE = 12;
 
 const createBadRequestError = (message) => {
@@ -464,11 +473,120 @@ class AuthService {
     );
   }
 
+  async loginWithGoogle({ idToken, wishlist }) {
+    if (!idToken) {
+      throw createBadRequestError("Google ID token topilmadi");
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      throw new Error("Google Client ID sozlanmagan");
+    }
+
+    let payload;
+
+    try {
+      const ticket = await getGoogleClient().verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      payload = ticket.getPayload();
+    } catch (_error) {
+      const error = new Error("Google token noto'g'ri yoki muddati tugagan");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const googleId = payload?.sub;
+    const email = payload?.email?.toLowerCase();
+    const name = payload?.name?.trim() || "User";
+    const avatar = payload?.picture || "";
+
+    if (!googleId || !email || payload?.email_verified !== true) {
+      const error = new Error("Google hisobi tasdiqlanmagan");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+      user = await User.findOne({ email });
+    }
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        avatar,
+        googleId,
+        authProvider: "google",
+        isVerified: true,
+        profileCompleted: false,
+      });
+    } else {
+      if (user.googleId && user.googleId !== googleId) {
+        const error = new Error("Bu email boshqa Google hisobiga bog'langan");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      user.googleId = googleId;
+      user.authProvider = "google";
+
+      // Keep Google's name for registrations that have not been completed yet.
+      // Do not overwrite a name the user has already confirmed in their profile.
+      if (user.profileCompleted === false && name) {
+        user.name = name;
+      }
+
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+      }
+      await user.save();
+    }
+
+    const hasPhone = isValidPhone(formatUzPhone(user.phone));
+    const hasAddress = Array.isArray(user.addresses) && user.addresses.length > 0;
+    const needsProfileCompletion =
+      user.profileCompleted === false || !hasPhone || !hasAddress;
+
+    if (needsProfileCompletion) {
+      return {
+        isNewUser: true,
+        provider: "google",
+        registrationToken: this.generateRegistrationToken(user._id, "google"),
+        profile: {
+          name: user.name,
+          phone: user.phone || undefined,
+          image: user.avatar || undefined,
+          email: user.email || undefined,
+        },
+      };
+    }
+
+    const tokens = this.generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
+
+    await this.mergeWishlist(user, wishlist);
+    await user.save();
+
+    return {
+      isNewUser: false,
+      session: {
+        user: sanitizeUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    };
+  }
+
   async completeRegistration({
     registrationToken,
     name,
     phone,
     birthDate,
+    city,
     region,
     district,
   }) {
@@ -504,6 +622,7 @@ class AuthService {
     }
 
     const normalizedName = String(name || "").trim();
+    const normalizedCity = String(city || district || "").trim();
     const normalizedRegion = String(region || "").trim();
     const normalizedDistrict = String(district || "").trim();
     const formattedPhone = formatUzPhone(phone || user.phone);
@@ -532,20 +651,42 @@ class AuthService {
       throw createBadRequestError("Bu telefon raqami avval ro'yxatdan o'tgan");
     }
 
-    user.name = normalizedName;
-    user.phone = formattedPhone;
-    user.birthDate = validateRegistrationBirthDate(birthDate);
-    user.region = normalizedRegion;
-    user.district = normalizedDistrict;
-    user.profileCompleted = true;
-    user.isVerified = true;
-
     const tokens = this.generateTokens(user._id);
-    user.refreshToken = tokens.refreshToken;
-    await user.save();
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          name: normalizedName,
+          phone: formattedPhone,
+          birthDate: validateRegistrationBirthDate(birthDate),
+          region: normalizedRegion,
+          district: normalizedDistrict,
+          addresses: [
+            {
+              city: normalizedCity,
+              region: normalizedRegion,
+              district: normalizedDistrict,
+              isDefault: true,
+            },
+          ],
+          authProvider: payload.provider || user.authProvider,
+          phoneVerified: payload.provider === "phone",
+          profileCompleted: true,
+          isVerified: true,
+          refreshToken: tokens.refreshToken,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedUser || updatedUser.phone !== formattedPhone) {
+      const error = new Error("Telefon raqamini saqlashda xatolik yuz berdi");
+      error.statusCode = 500;
+      throw error;
+    }
 
     return {
-      user: sanitizeUser(user),
+      user: sanitizeUser(updatedUser),
       ...tokens,
     };
   }

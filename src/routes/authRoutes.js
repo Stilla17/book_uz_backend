@@ -29,6 +29,9 @@ router.post(
   authController.completeRegistration,
 );
 
+// Google OAuth orqali tizimga kirish: POST /api/v1/auth/google/login
+router.post("/mobile/google", authController.loginWithGoogle);
+
 // 3. Tokenni yangilash: POST /api/v1/auth/refresh
 router.post("/refresh", authController.refresh);
 

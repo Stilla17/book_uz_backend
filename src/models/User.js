@@ -31,6 +31,7 @@ const UserSchema = new mongoose.Schema(
       {
         city: String,
         region: String,
+        district: String,
         street: String,
         isDefault: { type: Boolean, default: false },
       },
@@ -45,6 +46,7 @@ const UserSchema = new mongoose.Schema(
     ],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     isVerified: { type: Boolean, default: false },
+    phoneVerified: { type: Boolean, default: false },
     refreshToken: { type: String },
     telegramUsername: {
       type: String,

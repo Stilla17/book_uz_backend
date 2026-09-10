@@ -190,8 +190,36 @@ const verifyMobilePhoneOtp = async (req, res, next) => {
   }
 };
 
+const loginWithGoogle = async (req, res, next) => {
+  try {
+    const { idToken, wishlist, wishlistProductIds, productIds } = req.body;
+
+    const result = await authService.loginWithGoogle({
+      idToken,
+      wishlist: wishlistProductIds || productIds || wishlist,
+    });
+
+    if (!result.isNewUser) {
+      res.cookie("refreshToken", result.session.refreshToken, cookieOptions);
+    }
+
+    return apiResponse(
+      res,
+      200,
+      true,
+      result.isNewUser
+        ? "Qo'shimcha ma'lumotlarni kiriting"
+        : "Google orqali tizimga kirildi",
+      result,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 const completeRegistration = async (req, res, next) => {
   try {
+    
     const result = await authService.completeRegistration(req.body);
 
     res.cookie("refreshToken", result.refreshToken, cookieOptions);
@@ -267,4 +295,5 @@ module.exports = {
   sendMobilePhoneOtp,
   verifyMobilePhoneOtp,
   completeRegistration,
+  loginWithGoogle,
 };
