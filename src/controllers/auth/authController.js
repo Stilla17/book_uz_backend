@@ -219,8 +219,8 @@ const loginWithGoogle = async (req, res, next) => {
 
 const completeRegistration = async (req, res, next) => {
   try {
-    
-    const result = await authService.completeRegistration(req.body);
+    const registrationData = req.body ?? {};
+    const result = await authService.completeRegistration(registrationData);
 
     res.cookie("refreshToken", result.refreshToken, cookieOptions);
 

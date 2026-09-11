@@ -547,7 +547,8 @@ class AuthService {
     }
 
     const hasPhone = isValidPhone(formatUzPhone(user.phone));
-    const hasAddress = Array.isArray(user.addresses) && user.addresses.length > 0;
+    const hasAddress =
+      Array.isArray(user.addresses) && user.addresses.length > 0;
     const needsProfileCompletion =
       user.profileCompleted === false || !hasPhone || !hasAddress;
 
@@ -581,15 +582,14 @@ class AuthService {
     };
   }
 
-  async completeRegistration({
-    registrationToken,
-    name,
-    phone,
-    birthDate,
-    city,
-    region,
-    district,
-  }) {
+  async completeRegistration(registrationData = {}) {
+    const {
+      registrationToken,
+      name,
+      phone,
+      birthDate,
+      addresses = [],
+    } = registrationData;
     const secret =
       process.env.JWT_REGISTRATION_SECRET || process.env.JWT_ACCESS_SECRET;
 
@@ -622,10 +622,14 @@ class AuthService {
     }
 
     const normalizedName = String(name || "").trim();
-    const normalizedCity = String(city || district || "").trim();
-    const normalizedRegion = String(region || "").trim();
-    const normalizedDistrict = String(district || "").trim();
     const formattedPhone = formatUzPhone(phone || user.phone);
+    const defaultAddress = Array.isArray(addresses)
+      ? addresses.find((address) => address.isDefault) || addresses[0]
+      : addresses;
+
+    const normalizedCity = String(defaultAddress?.city || "").trim();
+    const normalizedRegion = String(defaultAddress?.region || "").trim();
+    const normalizedDistrict = String(defaultAddress?.district || "").trim();
 
     if (normalizedName.length < 2) {
       throw createBadRequestError(
@@ -659,13 +663,12 @@ class AuthService {
           name: normalizedName,
           phone: formattedPhone,
           birthDate: validateRegistrationBirthDate(birthDate),
-          region: normalizedRegion,
-          district: normalizedDistrict,
           addresses: [
             {
               city: normalizedCity,
               region: normalizedRegion,
               district: normalizedDistrict,
+              street: String(defaultAddress?.street || "").trim(),
               isDefault: true,
             },
           ],

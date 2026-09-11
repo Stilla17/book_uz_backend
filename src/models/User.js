@@ -111,16 +111,6 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
-
-    region: {
-      type: String,
-      trim: true,
-    },
-
-    district: {
-      type: String,
-      trim: true,
-    },
   },
   { timestamps: true },
 );
