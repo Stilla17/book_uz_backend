@@ -1,44 +1,46 @@
-const User = require('../../models/User');
-const Product = require('../../models/Product');
-const bcrypt = require('bcrypt');
-const mongoose = require('mongoose');
-const apiResponse = require('../../utils/apiResponse');
-const cloudinary = require('../../config/cloudinary');
-const { isValidEmail, isValidPhone } = require('../../utils/validator');
+const User = require("../../models/User");
+const Product = require("../../models/Product");
+const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
+const apiResponse = require("../../utils/apiResponse");
+const cloudinary = require("../../config/cloudinary");
+const { isValidEmail, isValidPhone } = require("../../utils/validator");
 
-const WISHLIST_PRODUCT_SELECT = 'title price discountPrice image ratingAvg slug author publisher stock';
+const WISHLIST_PRODUCT_SELECT =
+  "title price discountPrice image ratingAvg slug author publisher stock";
 
 const getPublicId = (url) => {
-  const parts = url.split('/');
-  const fileName = parts[parts.length - 1].split('.')[0];
-  const folder = parts.slice(-3, -1).join('/');
+  const parts = url.split("/");
+  const fileName = parts[parts.length - 1].split(".")[0];
+  const folder = parts.slice(-3, -1).join("/");
   return `${folder}/${fileName}`;
 };
 
 const normalizeWishlistProductIds = (wishlist = []) => {
   const source = Array.isArray(wishlist) ? wishlist : [];
 
-  return [...new Set(source
-    .map((item) => {
-      if (item && typeof item === 'object') {
-        return item.productId || item.product || item._id || item.id;
-      }
+  return [
+    ...new Set(
+      source
+        .map((item) => {
+          if (item && typeof item === "object") {
+            return item.productId || item.product || item._id || item.id;
+          }
 
-      return item;
-    })
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => id.toString()))];
+          return item;
+        })
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => id.toString()),
+    ),
+  ];
 };
 
 const populateWishlist = (query) =>
   query.populate({
-    path: 'wishlist',
+    path: "wishlist",
     select: WISHLIST_PRODUCT_SELECT,
     match: { isActive: true },
-    populate: [
-      { path: 'author' },
-      { path: 'publisher' },
-    ],
+    populate: [{ path: "author" }, { path: "publisher" }],
   });
 
 /**
@@ -47,9 +49,13 @@ const populateWishlist = (query) =>
 
 const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('-password -refreshToken');
+    const user = await User.findById(req.user._id).select(
+      "-password -refreshToken",
+    );
     apiResponse(res, 200, true, "Profil ma'lumotlari", user);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -59,7 +65,7 @@ const getProfile = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { name, email, phone, bio } = req.body;
+    const { name, email, phone, bio, birthDate, addresses } = req.body;
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -69,7 +75,7 @@ const updateProfile = async (req, res, next) => {
     const updateData = {};
 
     if (name !== undefined) {
-      if (typeof name !== 'string') {
+      if (typeof name !== "string") {
         return apiResponse(res, 400, false, "Ism matn bo'lishi kerak");
       }
       const normalizedName = name.trim();
@@ -80,7 +86,7 @@ const updateProfile = async (req, res, next) => {
     }
 
     if (email !== undefined) {
-      if (typeof email !== 'string') {
+      if (typeof email !== "string") {
         return apiResponse(res, 400, false, "Email matn bo'lishi kerak");
       }
       const normalizedEmail = email.trim().toLowerCase();
@@ -91,8 +97,13 @@ const updateProfile = async (req, res, next) => {
     }
 
     if (phone !== undefined) {
-      if (typeof phone !== 'string') {
-        return apiResponse(res, 400, false, "Telefon raqam matn bo'lishi kerak");
+      if (typeof phone !== "string") {
+        return apiResponse(
+          res,
+          400,
+          false,
+          "Telefon raqam matn bo'lishi kerak",
+        );
       }
       const normalizedPhone = phone.trim();
       if (!isValidPhone(normalizedPhone)) {
@@ -107,32 +118,108 @@ const updateProfile = async (req, res, next) => {
     }
 
     if (bio !== undefined) {
-      if (typeof bio !== 'string') {
+      if (typeof bio !== "string") {
         return apiResponse(res, 400, false, "Bio matn bo'lishi kerak");
       }
       updateData.bio = bio.trim();
     }
 
+    if (birthDate !== undefined) {
+      if (typeof birthDate !== "string") {
+        return apiResponse(res, 400, false, "Sana matn bo'lishi kerak");
+      }
+
+      const value = birthDate.trim();
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return apiResponse(
+          res,
+          400,
+          false,
+          "Sana YYYY-MM-DD formatida bo'lishi kerak",
+        );
+      }
+
+      const parsedDate = new Date(`${value}T00:00:00.000Z`);
+
+      if (Number.isNaN(parsedDate.getTime())) {
+        return apiResponse(res, 400, false, "Sana noto'g'ri");
+      }
+
+      if (parsedDate.toISOString().slice(0, 10) !== value) {
+        return apiResponse(res, 400, false, "Bunday sana mavjud emas");
+      }
+
+      if (parsedDate > new Date()) {
+        return apiResponse(
+          res,
+          400,
+          false,
+          "Sana kelajakda bo'lishi mumkin emas",
+        );
+      }
+
+      updateData.birthDate = parsedDate;
+    }
+
+    // Addresses
+    if (addresses !== undefined) {
+      if (!Array.isArray(addresses)) {
+        return apiResponse(res, 400, false, "Manzillar ro'yxat bo'lishi kerak");
+      }
+
+      const fields = ["region", "district", "city", "street"];
+
+      for (const address of addresses) {
+        if (
+          !address ||
+          typeof address !== "object" ||
+          fields.some((field) => typeof address[field] !== "string") ||
+          typeof address.isDefault !== "boolean"
+        ) {
+          return apiResponse(res, 400, false, "Manzil ma'lumotlari noto'g'ri");
+        }
+      }
+
+      updateData.addresses = addresses.map((address) => ({
+        region: address.region.trim(),
+        district: address.district.trim(),
+        city: address.city.trim(),
+        street: address.street.trim(),
+        isDefault: address.isDefault,
+        ...(address._id ? { _id: address._id } : {}),
+      }));
+    }
+
     if (req.file) {
       if (user.avatar) {
         const oldPublicId = getPublicId(user.avatar);
-        await cloudinary.uploader.destroy(oldPublicId).catch(e => console.log("Eski rasm o'chirilmadi:", e));
+        await cloudinary.uploader
+          .destroy(oldPublicId)
+          .catch((e) => console.log("Eski rasm o'chirilmadi:", e));
       }
       updateData.avatar = req.file.path;
     }
 
     if (!Object.keys(updateData).length) {
-      return apiResponse(res, 400, false, "Yangilash uchun ma'lumot yuborilmadi");
+      return apiResponse(
+        res,
+        400,
+        false,
+        "Yangilash uchun ma'lumot yuborilmadi",
+      );
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-      req.user._id, 
-      { $set: updateData }, 
-      { new: true, runValidators: true }
-    ).select('-password -refreshToken');
+      req.user._id,
+      { $set: updateData },
+      { new: true, runValidators: true },
+    ).select("-password -refreshToken");
 
     apiResponse(res, 200, true, "Profil yangilandi", updatedUser);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -154,7 +241,9 @@ const updatePassword = async (req, res, next) => {
     await user.save();
 
     apiResponse(res, 200, true, "Parol yangilandi");
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -172,13 +261,15 @@ const toggleWishlist = async (req, res, next) => {
     const product = await Product.findOne({
       _id: productId,
       isActive: true,
-    }).select('_id');
+    }).select("_id");
     if (!product) {
       return apiResponse(res, 404, false, "Mahsulot topilmadi");
     }
 
-    const user = await User.findById(req.user._id).select('wishlist');
-    const isWishlisted = user.wishlist.some((id) => id.toString() === productId);
+    const user = await User.findById(req.user._id).select("wishlist");
+    const isWishlisted = user.wishlist.some(
+      (id) => id.toString() === productId,
+    );
 
     if (isWishlisted) {
       user.wishlist = user.wishlist.filter((id) => id.toString() !== productId);
@@ -188,19 +279,25 @@ const toggleWishlist = async (req, res, next) => {
 
     await user.save();
 
-    const updatedUser = await populateWishlist(User.findById(req.user._id).select('wishlist'));
+    const updatedUser = await populateWishlist(
+      User.findById(req.user._id).select("wishlist"),
+    );
 
     apiResponse(
       res,
       200,
       true,
-      isWishlisted ? "Saralanganlardan o'chirildi" : "Saralanganlarga qo'shildi",
+      isWishlisted
+        ? "Saralanganlardan o'chirildi"
+        : "Saralanganlarga qo'shildi",
       {
-        action: isWishlisted ? 'removed' : 'added',
+        action: isWishlisted ? "removed" : "added",
         wishlist: updatedUser.wishlist,
       },
     );
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 const mergeWishlist = async (req, res, next) => {
@@ -210,23 +307,35 @@ const mergeWishlist = async (req, res, next) => {
     );
 
     if (!productIds.length) {
-      const user = await populateWishlist(User.findById(req.user._id).select('wishlist'));
-      return apiResponse(res, 200, true, "Saralanganlar birlashtirildi", user.wishlist);
+      const user = await populateWishlist(
+        User.findById(req.user._id).select("wishlist"),
+      );
+      return apiResponse(
+        res,
+        200,
+        true,
+        "Saralanganlar birlashtirildi",
+        user.wishlist,
+      );
     }
 
     const existingProductIds = await Product.find({
       _id: { $in: productIds },
       isActive: true,
-    }).distinct('_id');
+    }).distinct("_id");
 
-    const user = await populateWishlist(User.findByIdAndUpdate(
-      req.user._id,
-      { $addToSet: { wishlist: { $each: existingProductIds } } },
-      { new: true },
-    ).select('wishlist'));
+    const user = await populateWishlist(
+      User.findByIdAndUpdate(
+        req.user._id,
+        { $addToSet: { wishlist: { $each: existingProductIds } } },
+        { new: true },
+      ).select("wishlist"),
+    );
 
     apiResponse(res, 200, true, "Saralanganlar birlashtirildi", user.wishlist);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -235,9 +344,13 @@ const mergeWishlist = async (req, res, next) => {
 
 const getWishlistDetails = async (req, res, next) => {
   try {
-    const user = await populateWishlist(User.findById(req.user._id).select('wishlist'));
+    const user = await populateWishlist(
+      User.findById(req.user._id).select("wishlist"),
+    );
     apiResponse(res, 200, true, "Saralangan kitoblar", user.wishlist);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -250,13 +363,15 @@ const addAddress = async (req, res, next) => {
     const user = await User.findById(req.user._id);
 
     if (isDefault) {
-      user.addresses.forEach(addr => addr.isDefault = false);
+      user.addresses.forEach((addr) => (addr.isDefault = false));
     }
 
     user.addresses.push({ city, region, street, isDefault });
     await user.save();
     apiResponse(res, 200, true, "Manzil qo'shildi", user.addresses);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -267,12 +382,16 @@ const deleteAddress = async (req, res, next) => {
   try {
     const { addressId } = req.params;
     const user = await User.findById(req.user._id);
-    
-    user.addresses = user.addresses.filter(addr => addr._id.toString() !== addressId);
+
+    user.addresses = user.addresses.filter(
+      (addr) => addr._id.toString() !== addressId,
+    );
     await user.save();
-    
+
     apiResponse(res, 200, true, "Manzil o'chirildi", user.addresses);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -281,30 +400,39 @@ const deleteAddress = async (req, res, next) => {
 
 const getAddresses = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('addresses');
+    const user = await User.findById(req.user._id).select("addresses");
     apiResponse(res, 200, true, "Manzillar ro'yxati", user.addresses);
-  } catch (error) { 
-    next(error); 
+  } catch (error) {
+    next(error);
   }
 };
 
 const updateNotificationSettings = async (req, res, next) => {
   try {
     const { email, sms, telegram, push } = req.body;
-    
+
     const user = await User.findById(req.user._id);
-    
+
     user.notifications = {
       email: email !== undefined ? email : user.notifications?.email,
       sms: sms !== undefined ? sms : user.notifications?.sms,
-      telegram: telegram !== undefined ? telegram : user.notifications?.telegram,
-      push: push !== undefined ? push : user.notifications?.push
+      telegram:
+        telegram !== undefined ? telegram : user.notifications?.telegram,
+      push: push !== undefined ? push : user.notifications?.push,
     };
-    
+
     await user.save();
-    
-    apiResponse(res, 200, true, "Xabarnoma sozlamalari yangilandi", user.notifications);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Xabarnoma sozlamalari yangilandi",
+      user.notifications,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -313,17 +441,25 @@ const updateNotificationSettings = async (req, res, next) => {
 
 const getNotificationSettings = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('notifications');
-    
+    const user = await User.findById(req.user._id).select("notifications");
+
     const defaultNotifications = {
       email: true,
       sms: false,
       telegram: true,
-      push: true
+      push: true,
     };
-    
-    apiResponse(res, 200, true, "Xabarnoma sozlamalari", user.notifications || defaultNotifications);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Xabarnoma sozlamalari",
+      user.notifications || defaultNotifications,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -333,19 +469,34 @@ const getNotificationSettings = async (req, res, next) => {
 const updateSecuritySettings = async (req, res, next) => {
   try {
     const { twoFactorAuth, loginAlerts, deviceHistory } = req.body;
-    
+
     const user = await User.findById(req.user._id);
-    
+
     user.security = {
-      twoFactorAuth: twoFactorAuth !== undefined ? twoFactorAuth : user.security?.twoFactorAuth,
-      loginAlerts: loginAlerts !== undefined ? loginAlerts : user.security?.loginAlerts,
-      deviceHistory: deviceHistory !== undefined ? deviceHistory : user.security?.deviceHistory
+      twoFactorAuth:
+        twoFactorAuth !== undefined
+          ? twoFactorAuth
+          : user.security?.twoFactorAuth,
+      loginAlerts:
+        loginAlerts !== undefined ? loginAlerts : user.security?.loginAlerts,
+      deviceHistory:
+        deviceHistory !== undefined
+          ? deviceHistory
+          : user.security?.deviceHistory,
     };
-    
+
     await user.save();
-    
-    apiResponse(res, 200, true, "Xavfsizlik sozlamalari yangilandi", user.security);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Xavfsizlik sozlamalari yangilandi",
+      user.security,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -354,17 +505,24 @@ const updateSecuritySettings = async (req, res, next) => {
 
 const getSecuritySettings = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('security');
-    
+    const user = await User.findById(req.user._id).select("security");
 
     const defaultSecurity = {
       twoFactorAuth: false,
       loginAlerts: true,
-      deviceHistory: false
+      deviceHistory: false,
     };
-    
-    apiResponse(res, 200, true, "Xavfsizlik sozlamalari", user.security || defaultSecurity);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Xavfsizlik sozlamalari",
+      user.security || defaultSecurity,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -374,19 +532,27 @@ const getSecuritySettings = async (req, res, next) => {
 const updateLanguageRegion = async (req, res, next) => {
   try {
     const { language, currency } = req.body;
-    
+
     const user = await User.findById(req.user._id);
-    
+
     user.preferences = {
       ...user.preferences,
-      language: language || user.preferences?.language || 'uz',
-      currency: currency || user.preferences?.currency || 'UZS'
+      language: language || user.preferences?.language || "uz",
+      currency: currency || user.preferences?.currency || "UZS",
     };
-    
+
     await user.save();
-    
-    apiResponse(res, 200, true, "Til va mintaqa sozlamalari yangilandi", user.preferences);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Til va mintaqa sozlamalari yangilandi",
+      user.preferences,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -395,15 +561,23 @@ const updateLanguageRegion = async (req, res, next) => {
 
 const getLanguageRegion = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('preferences');
-    
+    const user = await User.findById(req.user._id).select("preferences");
+
     const defaultPreferences = {
-      language: 'uz',
-      currency: 'UZS'
+      language: "uz",
+      currency: "UZS",
     };
-    
-    apiResponse(res, 200, true, "Til va mintaqa sozlamalari", user.preferences || defaultPreferences);
-  } catch (error) { next(error); }
+
+    apiResponse(
+      res,
+      200,
+      true,
+      "Til va mintaqa sozlamalari",
+      user.preferences || defaultPreferences,
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -412,10 +586,12 @@ const getLanguageRegion = async (req, res, next) => {
 
 const getActiveDevices = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).select('devices');
+    const user = await User.findById(req.user._id).select("devices");
 
     apiResponse(res, 200, true, "Faol qurilmalar", user.devices || []);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -425,18 +601,22 @@ const getActiveDevices = async (req, res, next) => {
 const removeDevice = async (req, res, next) => {
   try {
     const { deviceId } = req.params;
-    
+
     const user = await User.findById(req.user._id);
-    
+
     if (!user.devices) {
       user.devices = [];
     }
-    
-    user.devices = user.devices.filter(device => device._id.toString() !== deviceId);
+
+    user.devices = user.devices.filter(
+      (device) => device._id.toString() !== deviceId,
+    );
     await user.save();
-    
+
     apiResponse(res, 200, true, "Qurilma o'chirildi", user.devices);
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -446,33 +626,33 @@ const removeDevice = async (req, res, next) => {
 const deleteAccount = async (req, res, next) => {
   try {
     const { password } = req.body;
-    
+
     const user = await User.findById(req.user._id);
-    
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return apiResponse(res, 400, false, "Parol noto'g'ri");
     }
-    
+
     await User.findByIdAndDelete(req.user._id);
-    
+
     apiResponse(res, 200, true, "Hisob o'chirildi");
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
-
-
-module.exports = { 
-  getProfile, 
-  updateProfile, 
-  updatePassword, 
-  toggleWishlist, 
+module.exports = {
+  getProfile,
+  updateProfile,
+  updatePassword,
+  toggleWishlist,
   mergeWishlist,
   getWishlistDetails,
   addAddress,
   deleteAddress,
   getAddresses,
-   updateNotificationSettings,
+  updateNotificationSettings,
   getNotificationSettings,
   updateSecuritySettings,
   getSecuritySettings,
@@ -480,5 +660,5 @@ module.exports = {
   getLanguageRegion,
   getActiveDevices,
   removeDevice,
-  deleteAccount
+  deleteAccount,
 };

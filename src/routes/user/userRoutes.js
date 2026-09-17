@@ -1,66 +1,59 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const userController = require('../../controllers/user/userController');
-const { protect } = require('../../middlewares/auth');;
-const upload = require('../../middlewares/upload'); 
-
+const userController = require("../../controllers/user/userController");
+const { protect } = require("../../middlewares/auth");
+const upload = require("../../middlewares/upload");
 
 router.use(protect);
 
 /**
  * PROFIL MA'LUMOTLARI
  */
-router.get('/profile', userController.getProfile);
-router.patch('/profile', upload.single('avatar'), userController.updateProfile);
-router.patch('/update-profile', upload.single('avatar'), userController.updateProfile);
-router.patch('/update-password', userController.updatePassword);    
+router.get("/profile", userController.getProfile);
+router.patch("/profile", upload.single("avatar"), userController.updateProfile);
+router.patch("/update-password", userController.updatePassword);
 
 /**
  * WISHLIST (SARALANGANLAR)
  */
-router.get('/wishlist', userController.getWishlistDetails);
-router.post('/wishlist/toggle', userController.toggleWishlist); 
-router.post('/wishlist/merge', userController.mergeWishlist);
+router.get("/wishlist", userController.getWishlistDetails);
+router.post("/wishlist/toggle", userController.toggleWishlist);
+router.post("/wishlist/merge", userController.mergeWishlist);
 
 /**
  * MANZILLAR (SHIPPING ADDRESS)
  */
-router.get('/addresses', userController.getAddresses); 
-router.post('/address', userController.addAddress);
-router.delete('/address/:addressId', userController.deleteAddress);
-
-
-
-
-
+router.get("/addresses", userController.getAddresses);
+router.post("/address", userController.addAddress);
+router.delete("/address/:addressId", userController.deleteAddress);
 
 /**
  * XABARNOMA SOZLAMALARI
  */
-router.get('/notifications', userController.getNotificationSettings);
-router.put('/notifications', userController.updateNotificationSettings);
+router.get("/notifications", userController.getNotificationSettings);
+router.put("/notifications", userController.updateNotificationSettings);
 
 /**
  * XAVFSIZLIK SOZLAMALARI
  */
-router.get('/security', userController.getSecuritySettings);
-router.put('/security', userController.updateSecuritySettings);
+router.get("/security", userController.getSecuritySettings);
+router.put("/security", userController.updateSecuritySettings);
 
 /**
  * TIL VA MINTAQA SOZLAMALARI
  */
-router.get('/preferences', userController.getLanguageRegion);
-router.put('/preferences', userController.updateLanguageRegion);
+router.get("/preferences", userController.getLanguageRegion);
+router.put("/preferences", userController.updateLanguageRegion);
 
 /**
  * QURILMALAR
  */
-router.get('/devices', userController.getActiveDevices);
-router.delete('/devices/:deviceId', userController.removeDevice);
+router.get("/devices", userController.getActiveDevices);
+router.delete("/devices/:deviceId", userController.removeDevice);
 
 /**
  * HISOBNI O'CHIRISH
  */
-router.delete('/account', userController.deleteAccount);
+router.delete("/account", userController.deleteAccount);
 
 module.exports = router;

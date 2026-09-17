@@ -127,7 +127,10 @@ const getAllUsersAdmin = async (req, res, next) => {
 
     const userQuery = User.find(userFilter)
       .select("-password -refreshToken")
-      .populate("purchasedBooks.product", "title price discountPrice image slug")
+      .populate(
+        "purchasedBooks.product",
+        "title price discountPrice image slug",
+      )
       .sort("-createdAt");
     const amoContactQuery =
       AmoContact.find(amoContactFilter).sort("-createdAt");
