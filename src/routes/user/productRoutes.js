@@ -1,7 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../../controllers/user/productController");
-const { optionalProtect } = require("../../middlewares/auth");
+const ebookController = require("../../controllers/user/ebookController");
+const { optionalProtect, protect } = require("../../middlewares/auth");
+
+router.get("/:id/ebook/access", protect, ebookController.getEbookAccess);
+
+router.post("/:id/ebook/purchase", protect, ebookController.purchaseEbook);
+
+router.get("/:id/ebook", protect, ebookController.readEbook);
 
 // 1. Asosiy ro'yxat (Hamma filtrlar shu yerda ishlaydi)
 router.get("/", optionalProtect, productController.getAllProducts);

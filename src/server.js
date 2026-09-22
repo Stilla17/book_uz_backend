@@ -1,7 +1,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") }); // 1. Barcha o'zgaruvchilardan oldin turishi shart
 const dns = require("dns");
-const { syncMoyskladProducts, startSyncCron } = require("./utils/moyskladSync");
+const { startSyncCron } = require("./utils/moyskladSync");
 const { startBirthdaySmsCron } = require("./utils/birthdaySmsCron");
 const { startTopSalesCron } = require("./services/moyskladTopSales.service");
 
@@ -32,7 +32,6 @@ const { openApiDocument, swaggerHtml } = require("./docs/swagger");
 connectDB().then(() => {
   startAmoContactSync();
   startSyncCron();
-  syncMoyskladProducts();
   startBirthdaySmsCron();
   startTopSalesCron();
 });
@@ -70,8 +69,8 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    exposedHeaders: ["Set-Cookie"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Range"],
+    exposedHeaders: ["Set-Cookie", "Accept-Ranges", "Content-Range", "Content-Length"],
     optionsSuccessStatus: 200,
   }),
 );

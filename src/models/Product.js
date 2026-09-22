@@ -24,6 +24,19 @@ const ProductSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     discountPrice: { type: Number, default: 0 },
     image: { type: String, default: "" },
+    ebook: {
+      storageKey: { type: String, trim: true },
+      originalName: { type: String, trim: true },
+      format: { type: String, enum: ["epub"] },
+      size: { type: Number, min: 0 },
+      access: {
+        type: String,
+        enum: ["public", "login", "purchase"],
+        default: "public",
+      },
+      price: { type: Number, min: 0 },
+      url: { type: String, trim: true },
+    },
     stock: { type: Number, default: 0 },
     branchStocks: [
       {
@@ -171,6 +184,11 @@ const removedExternalProductFields = [
 ].map((parts) => parts.join(""));
 
 const hideRemovedProductFields = (doc, ret) => {
+  if (ret.ebook) {
+    ret.hasEbook = Boolean(doc.ebook?.storageKey);
+    delete ret.ebook.storageKey;
+    delete ret.ebook.url;
+  }
   removedExternalProductFields.forEach((field) => {
     delete ret[field];
   });

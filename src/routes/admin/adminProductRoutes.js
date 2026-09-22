@@ -4,8 +4,21 @@ const productController = require("../../controllers/admin/productController");
 const { protect, restrictTo } = require("../../middlewares/auth");
 const upload = require("../../middlewares/upload"); // Rasmlar uchun
 const Product = require("../../models/Product");
+const uploadEbook = require("../../middlewares/uploadEbook");
+const ebookController = require("../../controllers/admin/ebookController");
 
 router.use(protect, restrictTo("admin"));
+router.delete("/:id/ebook", ebookController.deleteEbook);
+router.post(
+  "/:id/ebook",
+  uploadEbook.single("ebook"),
+  ebookController.uploadEbook,
+);
+router.put(
+  "/:id/ebook",
+  uploadEbook.single("ebook"),
+  ebookController.replaceEbook,
+);
 
 // GET routes - MUHIM! GET birinchi bo'lishi kerak
 router.get("/", productController.getAllProducts); // YANGI QO'SHILDI

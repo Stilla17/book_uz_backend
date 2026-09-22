@@ -33,7 +33,7 @@ const getSortOption = (sort) => {
 
 const getAllAuthors = async (req, res, next) => {
   try {
-    const { search, page = 1, limit = 50, minimal } = req.query;
+    const { search, page = 1, limit = 50, minimal, sort } = req.query;
     const isMinimal = minimal === "true";
     const normalizedLimit = Math.min(
       Number(limit) || 50,
@@ -44,6 +44,54 @@ const getAllAuthors = async (req, res, next) => {
     const filter = {};
     if (search) {
       filter.name = buildSearchRegex(search);
+    }
+
+    if (!isMinimal && sort === "books_count_desc") {
+      const [authors, total] = await Promise.all([
+        Author.aggregate([
+          { $match: filter },
+          {
+            $lookup: {
+              from: Product.collection.name,
+              localField: "_id",
+              foreignField: "author",
+              pipeline: [{ $project: { _id: 1 } }],
+              as: "authorBooks",
+            },
+          },
+          {
+            $lookup: {
+              from: Product.collection.name,
+              localField: "books",
+              foreignField: "_id",
+              pipeline: [{ $project: { _id: 1 } }],
+              as: "linkedBooks",
+            },
+          },
+          {
+            $addFields: {
+              booksCount: {
+                $size: { $setUnion: ["$authorBooks._id", "$linkedBooks._id"] },
+              },
+            },
+          },
+          { $sort: { booksCount: -1, name: 1, _id: 1 } },
+          { $skip: skip },
+          { $limit: normalizedLimit },
+          { $project: { authorBooks: 0, linkedBooks: 0 } },
+        ]),
+        Author.countDocuments(filter),
+      ]);
+
+      return apiResponse(res, 200, true, "Mualliflar ro'yxati", {
+        authors,
+        pagination: {
+          total,
+          page: Number(page),
+          pages: Math.ceil(total / normalizedLimit),
+          limit: normalizedLimit,
+        },
+      });
     }
 
     const authorQuery = Author.find(filter)

@@ -15,6 +15,11 @@ const OrderSchema = new mongoose.Schema(
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
         quantity: { type: Number, required: true },
         priceAtTime: { type: Number, required: true },
+        itemType: {
+          type: String,
+          enum: ["PHYSICAL", "EBOOK"],
+          default: "PHYSICAL",
+        },
       },
     ],
     totalAmount: { type: Number, required: true },
@@ -34,8 +39,8 @@ const OrderSchema = new mongoose.Schema(
     },
     postDeliveryType: {
       type: String,
-      enum: ['POST_OFFICE', 'POST_TO_HOME'],
-      required: false
+      enum: ["POST_OFFICE", "POST_TO_HOME"],
+      required: false,
     },
     paymentType: {
       type: String,

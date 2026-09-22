@@ -41,6 +41,13 @@ const withDisplayFields = (product) => {
     ? productObject.category[0]
     : productObject.category;
 
+  if (productObject.ebook) {
+    productObject.hasEbook =
+      productObject.hasEbook ?? Boolean(productObject.ebook.storageKey);
+    const { storageKey, url, ...ebookInfo } = productObject.ebook;
+    productObject.ebook = ebookInfo;
+  }
+
   return {
     ...productObject,
     author:

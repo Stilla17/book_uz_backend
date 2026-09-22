@@ -1,5 +1,8 @@
 const axios = require("axios");
+const crypto = require("crypto");
+const os = require("os");
 const Product = require("../models/Product");
+const SyncJobState = require("../models/SyncJobState");
 const TOKEN = process.env.MOYSKLAD_API_KEY;
 const {
   ensureMoyskladProduct,
@@ -18,8 +21,16 @@ const STOCK_REQUEST_DELAY_MS = 1200;
 const CHUNK_DELAY_MS = 3000;
 const ASSORTMENT_CHUNK_SIZE = 50;
 const SEVEN_HOURS_IN_MS = 7 * 60 * 60 * 1000;
+const SCHEDULER_POLL_MS = 60 * 1000;
+const RETRY_AFTER_ERROR_MS = 15 * 60 * 1000;
+const LOCK_LEASE_MS = 15 * 60 * 1000;
+const LOCK_HEARTBEAT_MS = 5 * 60 * 1000;
+const SYNC_JOB_NAME = "moysklad-products";
+const WORKER_ID = `${os.hostname()}:${process.pid}:${crypto.randomUUID()}`;
 
 let isSyncing = false;
+let schedulerTimer = null;
+let schedulerCheckRunning = false;
 
 const MOYSKLAD_BASE_URL = getMoyskladBaseUrl();
 const MOYSKLAD_ASSORTMENT_URL = `${MOYSKLAD_BASE_URL}/entity/assortment`;
@@ -107,7 +118,7 @@ const groupByExternalCode = (assortmentRows) => {
 const syncMoyskladProducts = async (options = {}) => {
   if (isSyncing) {
     console.log("MoySklad sinxronizatsiyasi hali davom etmoqda");
-    return;
+    return { skipped: true };
   }
 
   isSyncing = true;
@@ -125,7 +136,7 @@ const syncMoyskladProducts = async (options = {}) => {
 
     if (!myProducts.length) {
       console.log("MoySklad sync: Book.uz bazasida mahsulot topilmadi");
-      return;
+      return { synchronized: 0 };
     }
 
     // Asosiy bog'lanish faqat MoySklad UUID orqali qilinadi.
@@ -329,20 +340,135 @@ const syncMoyskladProducts = async (options = {}) => {
     console.log(
       `MoySklad sync yakunlandi. ${synchronizedCount} ta mahsulot sinxronlandi, ${externalCodeBackfilledCount} ta externalCode Book.uz bazasiga saqlandi.`,
     );
+
+    return { synchronized: synchronizedCount };
   } catch (error) {
     logMoyskladError("MoySklad mahsulot sync xatosi", error);
+    throw error;
   } finally {
     isSyncing = false;
   }
 };
 
-// Server ishga tushgan vaqtdan boshlab har 7 soatda sinxronizatsiya qiladi.
-const startSyncCron = () => {
-  setInterval(() => {
-    syncMoyskladProducts();
-  }, SEVEN_HOURS_IN_MS);
-
-  console.log("MoySklad sinxronizatsiyasi har 7 soatga sozlandi");
+const ensureSyncJobState = async () => {
+  try {
+    await SyncJobState.updateOne(
+      { _id: SYNC_JOB_NAME },
+      { $setOnInsert: { nextRunAt: new Date(0) } },
+      { upsert: true },
+    );
+  } catch (error) {
+    // Bir nechta instance bir vaqtda birinchi hujjatni yaratsa, bittasi yutadi.
+    if (error?.code !== 11000) throw error;
+  }
 };
 
-module.exports = { syncMoyskladProducts, startSyncCron };
+const acquireSyncLease = async () => {
+  await ensureSyncJobState();
+
+  const now = new Date();
+  return SyncJobState.findOneAndUpdate(
+    {
+      _id: SYNC_JOB_NAME,
+      nextRunAt: { $lte: now },
+      $or: [
+        { lockUntil: { $exists: false } },
+        { lockUntil: null },
+        { lockUntil: { $lte: now } },
+      ],
+    },
+    {
+      $set: {
+        lockedBy: WORKER_ID,
+        lockUntil: new Date(now.getTime() + LOCK_LEASE_MS),
+        lastStartedAt: now,
+      },
+    },
+    { new: true },
+  ).lean();
+};
+
+const extendSyncLease = () =>
+  SyncJobState.updateOne(
+    { _id: SYNC_JOB_NAME, lockedBy: WORKER_ID },
+    { $set: { lockUntil: new Date(Date.now() + LOCK_LEASE_MS) } },
+  ).catch((error) => {
+    console.error("MoySklad sync lock yangilash xatosi:", error.message);
+  });
+
+const finishScheduledSync = async ({ error, startedAt } = {}) => {
+  const now = new Date();
+  const successfulNextRunAt = new Date(
+    Math.max(
+      new Date(startedAt || now).getTime() + SEVEN_HOURS_IN_MS,
+      now.getTime() + SCHEDULER_POLL_MS,
+    ),
+  );
+  const update = {
+    $set: {
+      nextRunAt: error
+        ? new Date(now.getTime() + RETRY_AFTER_ERROR_MS)
+        : successfulNextRunAt,
+      ...(error
+        ? {
+            lastFailedAt: now,
+            lastError: (error.message || String(error)).slice(0, 2000),
+          }
+        : { lastSucceededAt: now }),
+    },
+    $unset: {
+      lockedBy: "",
+      lockUntil: "",
+      ...(!error ? { lastError: "" } : {}),
+    },
+  };
+
+  await SyncJobState.updateOne(
+    { _id: SYNC_JOB_NAME, lockedBy: WORKER_ID },
+    update,
+  );
+};
+
+const runScheduledSync = async () => {
+  if (schedulerCheckRunning) return;
+  schedulerCheckRunning = true;
+
+  let lease;
+  try {
+    lease = await acquireSyncLease();
+    if (!lease) return;
+
+    const heartbeat = setInterval(extendSyncLease, LOCK_HEARTBEAT_MS);
+    try {
+      const result = await syncMoyskladProducts();
+      if (result?.skipped) {
+        throw new Error("Mahalliy MoySklad sinxronizatsiyasi hali davom etmoqda");
+      }
+      await finishScheduledSync({ startedAt: lease.lastStartedAt });
+    } catch (error) {
+      await finishScheduledSync({ error });
+    } finally {
+      clearInterval(heartbeat);
+    }
+  } catch (error) {
+    console.error("MoySklad scheduler xatosi:", error.message);
+  } finally {
+    schedulerCheckRunning = false;
+  }
+};
+
+// Holat MongoDB'da saqlanadi: restartdan keyin ham navbatdagi vaqt yo'qolmaydi.
+const startSyncCron = () => {
+  if (schedulerTimer) return schedulerTimer;
+
+  runScheduledSync();
+  schedulerTimer = setInterval(runScheduledSync, SCHEDULER_POLL_MS);
+
+  console.log(
+    "MoySklad sinxronizatsiyasi har 7 soatda ishlashga sozlandi (restart-safe)",
+  );
+
+  return schedulerTimer;
+};
+
+module.exports = { syncMoyskladProducts, startSyncCron, runScheduledSync };

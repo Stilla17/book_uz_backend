@@ -371,7 +371,8 @@ class OrderService {
 
       const configuredDeliveryFee = await getDeliveryFee();
       const hasTashkentFreeDelivery =
-        freeDelivery === true && shippingAddress?.regionId === "toshkent_shahri";
+        freeDelivery === true &&
+        shippingAddress?.regionId === "toshkent_shahri";
       const deliveryFee = getOrderDeliveryFee(
         deliveryType,
         normalizedPostDeliveryType,
@@ -493,9 +494,13 @@ class OrderService {
         );
       }
 
-      if (order.items.length) {
+      const physicalItems = order.items.filter(
+        (item) => item.itemType !== "EBOOK",
+      );
+
+      if (physicalItems.length) {
         await Product.bulkWrite(
-          order.items.map((item) => ({
+          physicalItems.map((item) => ({
             updateOne: {
               filter: { _id: item.product },
               update: { $inc: { stock: item.quantity } },

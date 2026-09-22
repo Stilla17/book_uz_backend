@@ -31,7 +31,7 @@ const getSortOption = (sort) => {
 
 const getAllPublishers = async (req, res, next) => {
   try {
-    const { search, page = 1, limit = 50, minimal } = req.query;
+    const { search, page = 1, limit = 50, minimal, sort } = req.query;
     const isMinimal = minimal === "true";
     const normalizedLimit = Math.min(
       Number(limit) || 50,
@@ -42,6 +42,54 @@ const getAllPublishers = async (req, res, next) => {
     const filter = {};
     if (search) {
       filter.name = buildSearchRegex(search);
+    }
+
+    if (!isMinimal && sort === "books_count_desc") {
+      const [publishers, total] = await Promise.all([
+        Publisher.aggregate([
+          { $match: filter },
+          {
+            $lookup: {
+              from: Product.collection.name,
+              localField: "_id",
+              foreignField: "publisher",
+              pipeline: [{ $match: { isActive: true } }, { $project: { _id: 1 } }],
+              as: "publisherBooks",
+            },
+          },
+          {
+            $lookup: {
+              from: Product.collection.name,
+              localField: "books",
+              foreignField: "_id",
+              pipeline: [{ $match: { isActive: true } }, { $project: { _id: 1 } }],
+              as: "linkedBooks",
+            },
+          },
+          {
+            $addFields: {
+              booksCount: {
+                $size: { $setUnion: ["$publisherBooks._id", "$linkedBooks._id"] },
+              },
+            },
+          },
+          { $sort: { booksCount: -1, name: 1, _id: 1 } },
+          { $skip: skip },
+          { $limit: normalizedLimit },
+          { $project: { publisherBooks: 0, linkedBooks: 0 } },
+        ]),
+        Publisher.countDocuments(filter),
+      ]);
+
+      return apiResponse(res, 200, true, "Nashriyotlar ro'yxati", {
+        publishers,
+        pagination: {
+          total,
+          page: Number(page),
+          pages: Math.ceil(total / normalizedLimit),
+          limit: normalizedLimit,
+        },
+      });
     }
 
     const publisherQuery = Publisher.find(filter)

@@ -23,3 +23,4 @@ src/uploads/
 # Build natijalari (Agar TypeScript ishlatsangiz yoki build qilsangiz)
 dist/
 build/
+private/ebooks/
