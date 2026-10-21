@@ -98,6 +98,10 @@ const ProductSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Publishers",
     },
+    publishers: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Publishers" }],
+      default: [],
+    },
 
     contentLanguage: {
       type: String,
@@ -173,8 +177,32 @@ ProductSchema.index({ categories: 1 });
 ProductSchema.index({ subCategoryIds: 1 });
 ProductSchema.index({ author: 1 });
 ProductSchema.index({ publisher: 1 });
+ProductSchema.index({ publishers: 1 });
 ProductSchema.index({ isActive: 1, stock: 1, price: 1 });
 ProductSchema.index({ isActive: 1, views: -1, createdAt: -1 });
+ProductSchema.index({
+  isActive: 1,
+  createdAt: -1,
+  _id: -1,
+});
+
+ProductSchema.index({
+  isActive: 1,
+  price: 1,
+  _id: -1,
+});
+
+ProductSchema.index({
+  isActive: 1,
+  price: -1,
+  _id: -1,
+});
+
+ProductSchema.index({
+  isActive: 1,
+  ratingAvg: -1,
+  _id: -1,
+});
 
 const removedExternalProductFields = [
   ["barcode", "Normilize"],

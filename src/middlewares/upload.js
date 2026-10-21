@@ -1,6 +1,6 @@
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary');
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../config/cloudinary");
 
 /**
  * Dinamik storage funksiyasi
@@ -10,32 +10,45 @@ const cloudinary = require('../config/cloudinary');
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    let folderName = 'bookstore/others';
-    let resourceType = 'image';
-    let allowedFormats = ['jpg', 'png', 'jpeg', 'webp', 'gif'];
+    let folderName = "bookstore/others";
+    let resourceType = "image";
+    let allowedFormats = ["jpg", "png", "jpeg", "webp", "gif"];
     let transformation = [
-      { width: 1000, height: 1000, crop: 'limit' },
-      { quality: 'auto' },
-      { fetch_format: 'auto' }
+      { width: 800, height: 1200, crop: "limit" },
+      { quality: "auto" },
+      { fetch_format: "auto" },
     ];
 
+    if (file.mimetype.startsWith("image/")) {
+      folderName = "bookstore/images";
+      resourceType = "image";
+      allowedFormats = ["jpg", "png", "jpeg", "webp", "gif", "svg"];
 
-    if (file.mimetype.startsWith('image/')) {
-      folderName = 'bookstore/images';
-      resourceType = 'image';
-      allowedFormats = ['jpg', 'png', 'jpeg', 'webp', 'gif', 'svg'];
-      
-
-      if (req.baseUrl?.includes('product') || req.path?.includes('product')) {
-        folderName = 'bookstore/products';
-      } else if (req.baseUrl?.includes('user') || req.path?.includes('profile') || req.path?.includes('avatar')) {
-        folderName = 'bookstore/avatars';
-      } else if (req.baseUrl?.includes('category') || req.path?.includes('category')) {
-        folderName = 'bookstore/categories';
-      } else if (req.baseUrl?.includes('banner') || req.path?.includes('banner')) {
-        folderName = 'bookstore/banners';
-      } else if (req.baseUrl?.includes('news') || req.path?.includes('news')) {
-        folderName = 'bookstore/news';
+      if (req.baseUrl?.includes("product") || req.path?.includes("product")) {
+        folderName = "bookstore/products";
+      } else if (
+        req.baseUrl?.includes("user") ||
+        req.path?.includes("profile") ||
+        req.path?.includes("avatar")
+      ) {
+        folderName = "bookstore/avatars";
+      } else if (
+        req.baseUrl?.includes("category") ||
+        req.path?.includes("category")
+      ) {
+        folderName = "bookstore/categories";
+      } else if (
+        req.baseUrl?.includes("banner") ||
+        req.path?.includes("banner")
+      ) {
+        folderName = "bookstore/banners";
+        transformation = [
+          { width: 1920, height: 800, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" },
+        ];
+      } else if (req.baseUrl?.includes("news") || req.path?.includes("news")) {
+        folderName = "bookstore/news";
       }
     }
     return {
@@ -43,7 +56,7 @@ const storage = new CloudinaryStorage({
       resource_type: resourceType,
       allowed_formats: allowedFormats,
       transformation: transformation,
-      public_id: `${Date.now()}-${file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_')}`
+      public_id: `${Date.now()}-${file.originalname.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_")}`,
     };
   },
 });
@@ -53,21 +66,23 @@ const storage = new CloudinaryStorage({
  */
 
 const fileFilter = (req, file, cb) => {
-  console.log(' File filter check:', file.mimetype, file.originalname);
-  
+  console.log(" File filter check:", file.mimetype, file.originalname);
+
   // Rasm fayllarga ruxsat
-  if (file.mimetype.startsWith('image/')) {
-    console.log('Rasm fayl qabul qilindi');
+  if (file.mimetype.startsWith("image/")) {
+    console.log("Rasm fayl qabul qilindi");
     cb(null, true);
-  } 
+  }
   // Video fayllarga ruxsat
-  else if (file.mimetype.startsWith('video/')) {
-    console.log('Video fayl qabul qilindi');
+  else if (file.mimetype.startsWith("video/")) {
+    console.log("Video fayl qabul qilindi");
     cb(null, true);
-  } 
-  else {
-    console.log('Noto\'g\'ri fayl turi:', file.mimetype);
-    cb(new Error("Faqat rasm va video fayllar yuklash mumkin! (jpg, png, mp4)"), false);
+  } else {
+    console.log("Noto'g'ri fayl turi:", file.mimetype);
+    cb(
+      new Error("Faqat rasm va video fayllar yuklash mumkin! (jpg, png, mp4)"),
+      false,
+    );
   }
 };
 
@@ -76,7 +91,7 @@ const upload = multer({
   fileFilter: fileFilter,
   limits: {
     fileSize: 100 * 1024 * 1024, // Maksimal 100MB
-  }
+  },
 });
 
 module.exports = upload;

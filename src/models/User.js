@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, unique: true, sparse: true },
+    email: { type: String },
     password: { type: String },
     phone: { type: String, unique: true, sparse: true },
     birthDate: { type: Date },
@@ -113,6 +113,17 @@ const UserSchema = new mongoose.Schema(
     },
   },
   { timestamps: true },
+);
+
+// Email faqat haqiqiy string qiymat mavjud bo'lganda unique bo'ladi.
+// Bu emaili bo'lmagan Telegram/telefon foydalanuvchilarini saqlashga imkon beradi.
+UserSchema.index(
+  { email: 1 },
+  {
+    name: "email_1",
+    unique: true,
+    partialFilterExpression: { email: { $type: "string" } },
+  },
 );
 
 module.exports = mongoose.model("User", UserSchema);

@@ -6,6 +6,8 @@ const apiResponse = require("../../utils/apiResponse");
 const hydrateProductRelations = require("../../utils/hydrateProductRelations");
 const {
   applyActiveDiscountsToProducts,
+  applyDiscountsToProducts,
+  getActiveDiscounts,
 } = require("../../utils/productDiscounts");
 const {
   buildSearchPattern,
@@ -219,7 +221,7 @@ exports.getAllProducts = async (req, res, next) => {
       maxPrice,
       sort,
       page = 1,
-      limit = 12,
+      limit = 20,
       subCategoryId,
       subgenreId,
       subgenre,
@@ -407,22 +409,41 @@ exports.getAllProducts = async (req, res, next) => {
     if (sort === "price_desc") sortBy = { price: -1, _id: -1 };
     if (sort === "rating") sortBy = { ratingAvg: -1, _id: -1 };
 
-    const skip = (page - 1) * limit;
+    const normalizedPage = Math.max(Number(page) || 1, 1);
+    const normalizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+    const skip = (normalizedPage - 1) * normalizedLimit;
 
-    const [products, total] = await Promise.all([
+    const [products, total, activeDiscounts] = await Promise.all([
       Product.find(query)
-        .populate("category", CATEGORY_SELECT)
-        .populate("author")
-        .populate("publisher")
+        .populate({
+          path: "category",
+          select: [
+            "title",
+            "slug",
+            "subgenres._id",
+            "subgenres.slug",
+            "subgenres.title",
+            "subgenres.order",
+            "subgenres.isActive",
+          ].join(" "),
+        })
+        .populate({ path: "author", select: "name slug image" })
+        .populate({ path: "publisher", select: "name slug image description" })
         .sort(sortBy)
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(normalizedLimit)
+        .lean(),
+
       Product.countDocuments(query),
+
+      getActiveDiscounts(),
     ]);
 
     const hydratedProducts = await hydrateProductRelations(products);
-    const discountedProducts =
-      await applyActiveDiscountsToProducts(hydratedProducts);
+    const discountedProducts = applyDiscountsToProducts(
+      hydratedProducts,
+      activeDiscounts,
+    );
     const wishlistSet = getWishlistSet(req);
 
     apiResponse(res, 200, true, "Mahsulotlar ro'yxati", {
@@ -431,8 +452,9 @@ exports.getAllProducts = async (req, res, next) => {
       ),
       pagination: {
         total,
-        page: Number(page),
-        pages: Math.ceil(total / limit),
+        page: normalizedPage,
+        limit: normalizedLimit,
+        pages: Math.ceil(total / normalizedLimit),
       },
     });
   } catch (error) {

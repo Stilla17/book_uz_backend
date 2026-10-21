@@ -22,6 +22,7 @@ const newsRoutes = require("./user/newsRoutes");
 const topSalesRoutes = require("./user/topSalesRoutes");
 const faqRoutes = require("./user/faqRoutes");
 const settingsRoutes = require("./user/settingsRoutes");
+const catalogRoutes = require("./user/catalogRoutes");
 
 const clickRoutes = require("./click"); // Click.uz uchun marshrutlar
 const paymeRoutes = require("./payme"); // Payme uchun marshrutlar
@@ -45,6 +46,9 @@ const adminNewsRoutes = require("./admin/newsRoutes");
 const adminLocationRoutes = require("./admin/adminLocationRoutes");
 const adminFaqRoutes = require("./admin/faqRoutes");
 const adminSettingsRoutes = require("./admin/settingsRoutes");
+const telegramMiniAppRoutes = require("./telegramMiniAppRoutes");
+const adminCashbackRoutes = require("./admin/cashbackRoutes");
+const adminCatalogRoutes = require("./admin/catalogRoutes");
 
 // Marshrutlarni ulash
 router.use("/auth", authRoutes); // /api/v1/auth/...
@@ -68,6 +72,8 @@ router.use("/news", newsRoutes); // Yangiliklar uchun umumiy marshrutlar
 router.use("/top-sales", topSalesRoutes);
 router.use("/faqs", faqRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/mini-app", telegramMiniAppRoutes); //Telegram bot uchun web app
+router.use("/catalogs", catalogRoutes);
 
 router.use("/click", clickRoutes); // Click.uz uchun marshrutlar
 router.use("/payme", paymeRoutes); // Payme uchun marshrutlar
@@ -92,4 +98,6 @@ router.use("/admin/news", adminNewsRoutes); // Yangiliklar uchun admin marshrutl
 router.use("/admin/branches", adminLocationRoutes); // Locationlar uchun admin marshrutlari
 router.use("/admin/faqs", adminFaqRoutes);
 router.use("/admin/settings", adminSettingsRoutes);
+router.use("/admin/cashback", adminCashbackRoutes);
+router.use("/admin/catalogs", adminCatalogRoutes);
 module.exports = router;

@@ -1,11 +1,11 @@
-const Author = require('../models/Author');
-const Product = require('../models/Product');
-const Publisher = require('../models/Publisher');
+const Author = require("../models/Author");
+const Product = require("../models/Product");
+const Publisher = require("../models/Publisher");
 
 const normalizeEmbeddedRelation = (relation) => {
   const value = Array.isArray(relation) ? relation[0] : relation;
 
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== "object") {
     return null;
   }
 
@@ -36,7 +36,7 @@ const hydrateProductRelations = async (products) => {
   const productObjects = productList
     .filter(Boolean)
     .map((product) =>
-      typeof product.toObject === 'function' ? product.toObject() : product,
+      typeof product.toObject === "function" ? product.toObject() : product,
     );
 
   const missingAuthorIds = productObjects
@@ -56,30 +56,36 @@ const hydrateProductRelations = async (products) => {
     .map((product) => product._id)
     .filter(Boolean);
 
-  const [authors, publishers, publisherCount, defaultPublisher] = await Promise.all([
-    missingAuthorIds.length
-      ? Author.find({ books: { $in: missingAuthorIds } }).lean()
-      : [],
-    missingPublisherIds.length
-      ? Publisher.find({ books: { $in: missingPublisherIds } }).lean()
-      : [],
-    missingPublisherIds.length ? Publisher.countDocuments() : 0,
-    missingPublisherIds.length ? Publisher.findOne().sort({ createdAt: 1 }).lean() : null,
-  ]);
+  const [authors, publishers, publisherCount, defaultPublisher] =
+    await Promise.all([
+      missingAuthorIds.length
+        ? Author.find({ books: { $in: missingAuthorIds } }).lean()
+        : [],
+      missingPublisherIds.length
+        ? Publisher.find({ books: { $in: missingPublisherIds } }).lean()
+        : [],
+      missingPublisherIds.length ? Publisher.countDocuments() : 0,
+      missingPublisherIds.length
+        ? Publisher.findOne().sort({ createdAt: 1 }).lean()
+        : null,
+    ]);
 
-  const rawProducts = await Product.collection
-    .find({
-      _id: {
-        $in: [
-          ...new Set([
-            ...missingAuthorIds,
-            ...missingPublisherIds,
-            ...missingCategoryIds,
-          ]),
-        ],
-      },
-    })
-    .toArray();
+  const missingProductIds = [
+    ...new Set([
+      ...missingAuthorIds,
+      ...missingPublisherIds,
+      ...missingCategoryIds,
+    ]),
+  ];
+
+  const rawProducts = missingProductIds.length
+    ? await Product.collection
+        .find({
+          _id: { $in: missingProductIds },
+        })
+        .toArray()
+    : [];
+
   const rawProductById = new Map(
     rawProducts.map((product) => [product._id.toString(), product]),
   );

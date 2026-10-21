@@ -7,6 +7,7 @@ const OTP = require("../models/OTP");
 const { isValidPhone } = require("../utils/validator");
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const sendEskizSms = require("../utils/sendEskizSms");
+const { verifyTelegramLogin } = require("../utils/telegramLogin");
 let googleClient;
 
 const getGoogleClient = () => {
@@ -569,6 +570,79 @@ class AuthService {
     const tokens = this.generateTokens(user._id);
     user.refreshToken = tokens.refreshToken;
 
+    await this.mergeWishlist(user, wishlist);
+    await user.save();
+
+    return {
+      isNewUser: false,
+      session: {
+        user: sanitizeUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    };
+  }
+
+  async loginWithTelegram({ telegramPayload, wishlist }) {
+    const telegramProfile = verifyTelegramLogin(telegramPayload);
+    const {
+      telegramId,
+      firstName,
+      lastName,
+      username,
+      photoUrl,
+    } = telegramProfile;
+    const telegramName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+    let user = await User.findOne({ telegramId });
+
+    if (!user) {
+      user = await User.create({
+        name: telegramName || "Telegram foydalanuvchi",
+        avatar: photoUrl,
+        telegramId,
+        telegramUsername: username ? `@${username}` : "",
+        authProvider: "telegram",
+        isVerified: true,
+        profileCompleted: false,
+      });
+    } else {
+      if (telegramName && user.profileCompleted === false) {
+        user.name = telegramName;
+      }
+      if (photoUrl) user.avatar = photoUrl;
+      if (username) user.telegramUsername = `@${username}`;
+      user.authProvider = "telegram";
+      user.isVerified = true;
+    }
+
+    const hasPhone = isValidPhone(formatUzPhone(user.phone));
+    const hasAddress =
+      Array.isArray(user.addresses) && user.addresses.length > 0;
+    const needsProfileCompletion =
+      user.profileCompleted === false || !hasPhone || !hasAddress;
+
+    if (needsProfileCompletion) {
+      user.profileCompleted = false;
+      await user.save();
+
+      return {
+        isNewUser: true,
+        provider: "telegram",
+        registrationToken: this.generateRegistrationToken(
+          user._id,
+          "telegram",
+        ),
+        profile: {
+          name: user.name,
+          phone: user.phone || undefined,
+          image: user.avatar || undefined,
+        },
+      };
+    }
+
+    const tokens = this.generateTokens(user._id);
+    user.refreshToken = tokens.refreshToken;
     await this.mergeWishlist(user, wishlist);
     await user.save();
 

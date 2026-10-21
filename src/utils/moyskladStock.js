@@ -7,7 +7,10 @@ const calculateRetailStock = (branchStocks = []) =>
   Math.max(
     branchStocks
       .filter(isRetailStore)
-      .reduce((total, item) => total + Number(item.available || 0), 0),
+      .reduce(
+        (total, item) => total + Math.max(Number(item.available || 0), 0),
+        0,
+      ),
     0,
   );
 

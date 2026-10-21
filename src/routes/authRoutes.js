@@ -12,6 +12,8 @@ router.post("/register", authController.register);
 // 2. Tizimga kirish: POST /api/v1/auth/login
 router.post("/login", authController.login);
 
+router.post("/login/telegram", authController.loginWithTelegram);
+
 // Telefon raqam va ism familya orqali OTPsiz kirish: POST /api/v1/auth/phone/login
 router.post("/phone/login", authController.loginWithPhone);
 

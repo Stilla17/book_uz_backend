@@ -217,6 +217,38 @@ const loginWithGoogle = async (req, res, next) => {
   }
 };
 
+const loginWithTelegram = async (req, res, next) => {
+  try {
+    const {
+      telegramData,
+      wishlist,
+      wishlistProductIds,
+      productIds,
+      ...directTelegramPayload
+    } = req.body;
+    const result = await authService.loginWithTelegram({
+      telegramPayload: telegramData || directTelegramPayload,
+      wishlist: wishlistProductIds || productIds || wishlist,
+    });
+
+    if (!result.isNewUser) {
+      res.cookie("refreshToken", result.session.refreshToken, cookieOptions);
+    }
+
+    return apiResponse(
+      res,
+      200,
+      true,
+      result.isNewUser
+        ? "Qo'shimcha ma'lumotlarni kiriting"
+        : "Telegram orqali tizimga kirildi",
+      result,
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 const completeRegistration = async (req, res, next) => {
   try {
     const registrationData = req.body ?? {};
@@ -296,4 +328,5 @@ module.exports = {
   verifyMobilePhoneOtp,
   completeRegistration,
   loginWithGoogle,
+  loginWithTelegram,
 };

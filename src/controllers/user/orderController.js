@@ -8,6 +8,7 @@ const { getEffectiveProductPrice } = require("../../utils/productDiscounts");
 const { buildClickUrl } = require("../../payment/click/clickService");
 const { buildPaymeCheckoutUrl } = require("../../payment/payme/paymeService");
 const { formatUzPhone, normalizePhone } = require("../../utils/phone");
+const { hasEnoughStock } = require("../../utils/productStock");
 
 /**
  * 1. Yangi buyurtma yaratish (Place Order)
@@ -195,7 +196,7 @@ const reOrder = async (req, res, next) => {
 
     const unavailableItem = order.items.find((item) => {
       const product = productMap.get(item.product.toString());
-      return !product || product.stock < item.quantity;
+      return !hasEnoughStock(product, item.quantity);
     });
 
     if (unavailableItem) {

@@ -1,24 +1,14 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") }); // 1. Barcha o'zgaruvchilardan oldin turishi shart
-const dns = require("dns");
 const { startSyncCron } = require("./utils/moyskladSync");
 const { startBirthdaySmsCron } = require("./utils/birthdaySmsCron");
 const { startTopSalesCron } = require("./services/moyskladTopSales.service");
-
-// Node DNS'ni majburan Cloudflare'ga o'rnatamiz
-dns.setServers(["1.1.1.1", "1.0.0.1"]);
-
-// IPv4ni birinchi qo'yish
-dns.setDefaultResultOrder("ipv4first");
 
 const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
-
-// TELEGRAM BOT KOMMENTGA OLINDI:
-// const { initTelegramBot } = require('./utils/sendTelegram');
 
 const connectDB = require("./config/db");
 const { errorHandler } = require("./middlewares/error");
@@ -27,9 +17,16 @@ const { startAmoContactSync } = require("./utils/amocrmContactSync");
 
 const routes = require("./routes/index");
 const { openApiDocument, swaggerHtml } = require("./docs/swagger");
+const {
+  partnerOpenApiDocument,
+  partnerSwaggerHtml,
+} = require("./docs/partnerSwagger");
+const { initTelegramBot } = require("./services/telegramBotService");
 
 // 1. Ma'lumotlar bazasiga ulanish
 connectDB().then(() => {
+  initTelegramBot();
+
   startAmoContactSync();
   startSyncCron();
   startBirthdaySmsCron();
@@ -69,8 +66,18 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Range"],
-    exposedHeaders: ["Set-Cookie", "Accept-Ranges", "Content-Range", "Content-Length"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Range",
+    ],
+    exposedHeaders: [
+      "Set-Cookie",
+      "Accept-Ranges",
+      "Content-Range",
+      "Content-Length",
+    ],
     optionsSuccessStatus: 200,
   }),
 );
@@ -89,6 +96,16 @@ app.get("/api-docs.json", (req, res) => {
 
 app.get("/api-docs", (req, res) => {
   res.type("html").send(swaggerHtml);
+});
+
+app.get("/partner-api-docs.json", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.status(200).json(partnerOpenApiDocument);
+});
+
+app.get("/partner-api-docs", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.type("html").send(partnerSwaggerHtml);
 });
 
 app.use("/api/v1", routes);

@@ -32,6 +32,19 @@ const deleteProductImageFromCloudinary = async (imageUrl) => {
   await cloudinary.uploader.destroy(`bookstore/products/${publicId}`);
 };
 
+const deleteProductImageSafely = async (imageUrl, productId) => {
+  try {
+    await deleteProductImageFromCloudinary(imageUrl);
+    return true;
+  } catch (cloudinaryError) {
+    console.error(
+      `Product rasmi Cloudinary'dan o'chirilmadi (${productId}):`,
+      cloudinaryError.message,
+    );
+    return false;
+  }
+};
+
 const toTrimmedString = (value) => {
   if (Array.isArray(value)) return toTrimmedString(value[0]);
   if (value === undefined || value === null) return "";
@@ -90,6 +103,10 @@ const normalizePayload = (payload = {}) => {
     parseMaybeJson(payload.description) || payload.description;
   normalized.publisher =
     payload.publisher ?? payload.publish ?? payload.publisherId;
+  normalized.publishers = normalizeIdValues(
+    payload.publishers ?? normalized.publisher,
+  );
+  normalized.publisher = normalized.publishers[0] ?? normalized.publisher;
 
   if (payload.barcode !== undefined) {
     normalized.barcode = toTrimmedString(payload.barcode);
@@ -124,20 +141,36 @@ const normalizePayload = (payload = {}) => {
   return normalized;
 };
 
-const resolvePublisherId = (payload = {}) =>
-  payload.publisher ?? payload.publish ?? payload.publisherId ?? null;
+const resolvePublisherIds = (payload = {}) =>
+  normalizeIdValues(
+    payload.publishers ??
+      payload.publisher ??
+      payload.publish ??
+      payload.publisherId,
+  );
 
-const validatePublisher = async (publisherId) => {
-  if (!publisherId) {
-    return { publisherId: null };
+const validatePublishers = async (publisherValues) => {
+  const publisherIds = normalizeIdValues(publisherValues);
+  if (!publisherIds.length) {
+    return { publisherIds: [], primaryPublisherId: null };
   }
 
-  const publisher = await Publisher.findById(publisherId).select("_id");
-  if (!publisher) {
-    return { error: "Nashriyot topilmadi" };
+  const publishers = await Publisher.find({ _id: { $in: publisherIds } }).select(
+    "_id",
+  );
+  if (publishers.length !== publisherIds.length) {
+    return { error: "Tanlangan nashriyotlardan biri topilmadi" };
   }
 
-  return { publisherId: publisher._id };
+  const publisherById = new Map(
+    publishers.map((publisher) => [getIdString(publisher._id), publisher._id]),
+  );
+  const normalizedPublisherIds = publisherIds.map((id) => publisherById.get(id));
+
+  return {
+    publisherIds: normalizedPublisherIds,
+    primaryPublisherId: normalizedPublisherIds[0],
+  };
 };
 
 const findDuplicateBarcode = (barcode, excludeProductId) => {
@@ -344,8 +377,16 @@ const syncBookRelations = async (
     .map(getIdString)
     .filter(Boolean);
 
-  const previousPublisherId = getIdString(previousProduct.publisher);
-  const nextPublisherId = getIdString(nextProduct.publisher);
+  const previousPublisherIds = normalizeIdValues(
+    previousProduct.publishers?.length
+      ? previousProduct.publishers
+      : previousProduct.publisher,
+  );
+  const nextPublisherIds = normalizeIdValues(
+    nextProduct.publishers?.length
+      ? nextProduct.publishers
+      : nextProduct.publisher,
+  );
 
   const updates = [];
 
@@ -391,19 +432,22 @@ const syncBookRelations = async (
     );
   }
 
-  if (previousPublisherId && previousPublisherId !== nextPublisherId) {
+  const removedPublisherIds = previousPublisherIds.filter(
+    (publisherId) => !nextPublisherIds.includes(publisherId),
+  );
+  if (removedPublisherIds.length) {
     updates.push(
-      Publisher.updateOne(
-        { _id: previousPublisherId },
+      Publisher.updateMany(
+        { _id: { $in: removedPublisherIds } },
         { $pull: { books: productId } },
       ),
     );
   }
 
-  if (nextPublisherId) {
+  if (nextPublisherIds.length) {
     updates.push(
-      Publisher.updateOne(
-        { _id: nextPublisherId },
+      Publisher.updateMany(
+        { _id: { $in: nextPublisherIds } },
         { $addToSet: { books: productId } },
       ),
     );
@@ -543,7 +587,7 @@ const createProduct = async (req, res, next) => {
     if (!payload.author?.length) {
       return apiResponse(res, 400, false, "author majburiy");
     }
-    if (!payload.publisher) {
+    if (!payload.publishers.length) {
       return apiResponse(res, 400, false, "publisher majburiy");
     }
     if (!payload.barcode) {
@@ -572,8 +616,8 @@ const createProduct = async (req, res, next) => {
       return apiResponse(res, 400, false, catalogValidation.error);
     }
 
-    const publisherValidation = await validatePublisher(
-      resolvePublisherId(payload),
+    const publisherValidation = await validatePublishers(
+      resolvePublisherIds(payload),
     );
     if (publisherValidation.error) {
       return apiResponse(res, 400, false, publisherValidation.error);
@@ -638,7 +682,8 @@ const createProduct = async (req, res, next) => {
       stock: stockNum,
       subCategoryId: catalogValidation.primarySubCategoryId,
       subCategoryIds: catalogValidation.subCategoryIds,
-      publisher: publisherValidation.publisherId,
+      publisher: publisherValidation.primaryPublisherId,
+      publishers: publisherValidation.publisherIds,
       image,
       isDiscount,
     };
@@ -738,13 +783,16 @@ const updateProduct = async (req, res, next) => {
     }
 
     const hasPublisherField =
+      Object.prototype.hasOwnProperty.call(req.body, "publishers") ||
       Object.prototype.hasOwnProperty.call(req.body, "publisher") ||
       Object.prototype.hasOwnProperty.call(req.body, "publish") ||
       Object.prototype.hasOwnProperty.call(req.body, "publisherId");
-    const nextPublisherId = hasPublisherField
-      ? resolvePublisherId(payload)
-      : product.publisher;
-    const publisherValidation = await validatePublisher(nextPublisherId);
+    const nextPublisherIds = hasPublisherField
+      ? resolvePublisherIds(payload)
+      : product.publishers?.length
+        ? product.publishers
+        : [product.publisher].filter(Boolean);
+    const publisherValidation = await validatePublishers(nextPublisherIds);
     if (publisherValidation.error) {
       return apiResponse(res, 400, false, publisherValidation.error);
     }
@@ -753,7 +801,8 @@ const updateProduct = async (req, res, next) => {
     updateData.subCategoryIds = catalogValidation.subCategoryIds;
     updateData.category = catalogValidation.primaryCategoryId;
     updateData.categories = catalogValidation.categoryIds;
-    updateData.publisher = publisherValidation.publisherId;
+    updateData.publisher = publisherValidation.primaryPublisherId;
+    updateData.publishers = publisherValidation.publisherIds;
     delete updateData.subgenreId;
     delete updateData.subgenre;
     delete updateData.categoryId;
@@ -799,14 +848,7 @@ const updateProduct = async (req, res, next) => {
     );
 
     if (req.file && product.image && product.image !== req.file.path) {
-      try {
-        await deleteProductImageFromCloudinary(product.image);
-      } catch (cloudinaryError) {
-        console.error(
-          `Eski product rasmi o'chirilmadi (${product._id}):`,
-          cloudinaryError.message,
-        );
-      }
+      await deleteProductImageSafely(product.image, product._id);
     }
 
     await syncBookRelations(id, product, updatedProduct);
@@ -837,7 +879,7 @@ const deleteProductImage = async (req, res, next) => {
     }
 
     // 1. Cloudinary'dan o'chirish (Public ID orqali)
-    await deleteProductImageFromCloudinary(product.image);
+    await deleteProductImageSafely(product.image, product._id);
 
     // 2. Bazadan o'chirish
     product.image = "";
@@ -859,7 +901,7 @@ const deleteProduct = async (req, res, next) => {
     if (!product) return apiResponse(res, 404, false, "Kitob topilmadi");
 
     if (product.image) {
-      await deleteProductImageFromCloudinary(product.image);
+      await deleteProductImageSafely(product.image, product._id);
     }
 
     await syncBookRelations(product._id, product, {});

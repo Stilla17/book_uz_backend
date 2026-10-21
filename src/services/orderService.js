@@ -13,6 +13,7 @@ const {
 const { formatUzPhone, normalizePhone } = require("../utils/phone");
 const { isValidPhone } = require("../utils/validator");
 const { getDeliveryFee } = require("./storeSettingsService");
+const { hasUnlimitedStock } = require("../utils/productStock");
 
 const POST_OFFICE_DELIVERY_FEE = 20000;
 const POST_TO_HOME_DELIVERY_FEE = 40000;
@@ -278,12 +279,13 @@ class OrderService {
       for (const item of sourceItems) {
         const product = item.product;
         const quantity = Number(item.quantity);
+        const canIgnoreStock = allowOutOfStock || hasUnlimitedStock(product);
 
         if (
           !product ||
           !Number.isInteger(quantity) ||
           quantity <= 0 ||
-          (!allowOutOfStock && product.stock < quantity)
+          (!canIgnoreStock && product.stock < quantity)
         ) {
           throw this.createError(
             `Omborda yetarli emas: ${product ? product.title.uz : "Noma'lum mahsulot"}`,
@@ -309,7 +311,7 @@ class OrderService {
         // Ombordan kamaytirish. Product documentni save qilmaymiz, chunki eski importlardan
         // author/category populated object bo'lib qolgan productlar validatsiyada yiqilishi mumkin.
         const stockUpdate = await Product.updateOne(
-          allowOutOfStock
+          canIgnoreStock
             ? { _id: product._id, isActive: true }
             : { _id: product._id, isActive: true, stock: { $gte: quantity } },
           { $inc: { stock: -quantity } },

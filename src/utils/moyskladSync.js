@@ -8,6 +8,9 @@ const {
   ensureMoyskladProduct,
 } = require("../services/moyskladProductLinkService");
 const {
+  syncMoyskladCatalogs,
+} = require("../services/moyskladCatalogService");
+const {
   delay,
   getMoyskladBaseUrl,
   moyskladHeaders,
@@ -444,6 +447,7 @@ const runScheduledSync = async () => {
       if (result?.skipped) {
         throw new Error("Mahalliy MoySklad sinxronizatsiyasi hali davom etmoqda");
       }
+      await syncMoyskladCatalogs();
       await finishScheduledSync({ startedAt: lease.lastStartedAt });
     } catch (error) {
       await finishScheduledSync({ error });

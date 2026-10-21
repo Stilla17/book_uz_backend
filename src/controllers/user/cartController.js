@@ -2,6 +2,7 @@ const Cart = require('../../models/Cart');
 const Product = require('../../models/Product');
 const apiResponse = require('../../utils/apiResponse');
 const { applyActiveDiscountsToProducts, getEffectiveProductPrice } = require('../../utils/productDiscounts');
+const { hasEnoughStock } = require('../../utils/productStock');
 
 const populateCartProducts = (query) =>
   query.populate({
@@ -66,7 +67,7 @@ exports.addToCart = async (req, res, next) => {
 
     const product = await Product.findOne({ _id: productId, isActive: true });
     if (!product) return apiResponse(res, 404, false, "Mahsulot topilmadi");
-    if (product.stock < quantity) return apiResponse(res, 400, false, "Omborda yetarli mahsulot yo'q");
+    if (!hasEnoughStock(product, quantity)) return apiResponse(res, 400, false, "Omborda yetarli mahsulot yo'q");
 
     let cart = await Cart.findOne({ user: userId });
 
