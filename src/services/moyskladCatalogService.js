@@ -114,6 +114,7 @@ const resolveCatalogPrice = async ({ externalCode, moyskladId }) => {
   return {
     moyskladId: assortment.id,
     moyskladExternalCode: normalizedExternalCode,
+    moyskladName: assortment.name?.toString().trim() || "Nomsiz mahsulot",
     wholesalePrice,
     price,
     priceSyncedAt: new Date(),

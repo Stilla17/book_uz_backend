@@ -27,6 +27,11 @@ const catalogSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    
+    moyskladName: {
+      type: String,
+      trim: true,
+    },
 
     priceSyncedAt: Date,
 
